@@ -1,0 +1,42 @@
+{
+  "name": "test_hist1D_transform",
+  "description": "Simple 1D SF with transformation eta = abs(eta)",
+  "version": 0,
+  "inputs": [
+    {
+      "name": "eta",
+      "type": "real",
+      "description": "tau eta"
+    }
+  ],
+  "output": {
+    "name": "weight",
+    "type": "real"
+  },
+  "data": {
+    "nodetype": "transform",
+    "input": "eta",
+    "rule": {
+      "nodetype": "formula",
+      "expression": "abs(x)",
+      "parser": "TFormula",
+      "variables": [
+        "eta"
+      ]
+    },
+    "content": {
+      "nodetype": "binning",
+      "input": "eta",
+      "edges": [
+        0.0,
+        1.1,
+        2.5
+      ],
+      "content": [
+        0.0,
+        1.0
+      ],
+      "flow": "error"
+    }
+  }
+}

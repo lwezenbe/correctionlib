@@ -1,0 +1,24 @@
+{
+  "name": "test_formula2",
+  "description": "Simple formula, 'x^2'",
+  "version": 0,
+  "inputs": [
+    {
+      "name": "p",
+      "type": "real",
+      "description": "variable"
+    }
+  ],
+  "output": {
+    "name": "weight",
+    "type": "real"
+  },
+  "data": {
+    "nodetype": "formula",
+    "expression": "x^2",
+    "parser": "TFormula",
+    "variables": [
+      "p"
+    ]
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "name": "test_formula0",
+  "description": "Simple formula, 'x+1'",
+  "version": 0,
+  "inputs": [
+    {
+      "name": "p",
+      "type": "real",
+      "description": "variable"
+    }
+  ],
+  "output": {
+    "name": "weight",
+    "type": "real"
+  },
+  "data": {
+    "nodetype": "formula",
+    "expression": "x+1",
+    "parser": "TFormula",
+    "variables": [
+      "p"
+    ]
+  }
+}

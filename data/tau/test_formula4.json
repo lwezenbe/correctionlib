@@ -1,0 +1,24 @@
+{
+  "name": "test_formula4",
+  "description": "Simple formula, 'sqrt(x)'",
+  "version": 0,
+  "inputs": [
+    {
+      "name": "p",
+      "type": "real",
+      "description": "variable"
+    }
+  ],
+  "output": {
+    "name": "weight",
+    "type": "real"
+  },
+  "data": {
+    "nodetype": "formula",
+    "expression": "sqrt(x)",
+    "parser": "TFormula",
+    "variables": [
+      "p"
+    ]
+  }
+}

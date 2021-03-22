@@ -1,0 +1,66 @@
+{
+  "name": "test_category_mapping",
+  "description": "Simple category with mapping 11 -> 10",
+  "version": 0,
+  "inputs": [
+    {
+      "name": "dm",
+      "type": "int",
+      "description": "decay mode"
+    }
+  ],
+  "output": {
+    "name": "weight",
+    "type": "real"
+  },
+  "data": {
+    "nodetype": "transform",
+    "input": "dm",
+    "rule": {
+      "nodetype": "category",
+      "input": "dm",
+      "content": [
+        {
+          "key": 0,
+          "value": 0.0
+        },
+        {
+          "key": 1,
+          "value": 1.0
+        },
+        {
+          "key": 10,
+          "value": 10.0
+        },
+        {
+          "key": 11,
+          "value": 10.0
+        }
+      ],
+      "default": -1.0
+    },
+    "content": {
+      "nodetype": "category",
+      "input": "dm",
+      "content": [
+        {
+          "key": 0,
+          "value": 0.0
+        },
+        {
+          "key": 1,
+          "value": 1.0
+        },
+        {
+          "key": 10,
+          "value": 10.0
+        },
+        {
+          "key": 11,
+          "value": 11.0
+        }
+      ],
+      "default": -9.0
+    }
+  }
+}
