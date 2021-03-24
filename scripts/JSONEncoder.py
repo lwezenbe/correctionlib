@@ -1,5 +1,5 @@
 #! /usr/bin/env python3
-# Author: Izaak Neutelings (March 2022)
+# Author: Izaak Neutelings (March 2021)
 # Description: Reduce number of lines in JSON by collapsing lists
 # Adapted from:
 #   https://stackoverflow.com/questions/13249415/how-to-implement-custom-indentation-when-pretty-printing-with-the-json-module
