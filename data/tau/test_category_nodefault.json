@@ -1,38 +1,21 @@
-{
-  "name": "test_category_nodefault",
+{ "name": "test_category_nodefault",
   "description": "Simple category with no default",
   "version": 0,
   "inputs": [
-    {
-      "name": "dm",
+    { "name": "dm",
       "type": "int",
       "description": "decay mode"
     }
   ],
-  "output": {
-    "name": "weight",
-    "type": "real"
-  },
+  "output": { "name": "weight", "type": "real" },
   "data": {
     "nodetype": "category",
     "input": "dm",
     "content": [
-      {
-        "key": 0,
-        "value": 0.0
-      },
-      {
-        "key": 1,
-        "value": 1.0
-      },
-      {
-        "key": 10,
-        "value": 10.0
-      },
-      {
-        "key": 11,
-        "value": 11.0
-      }
+      { "key": 0, "value": 0.0 },
+      { "key": 1, "value": 1.0 },
+      { "key": 10, "value": 10.0 },
+      { "key": 11, "value": 11.0 }
     ]
   }
 }

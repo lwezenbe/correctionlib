@@ -1,24 +1,17 @@
-{
-  "name": "test_formula1",
+{ "name": "test_formula1",
   "description": "Simple formula, 'x*x'",
   "version": 0,
   "inputs": [
-    {
-      "name": "p",
+    { "name": "p",
       "type": "real",
       "description": "variable"
     }
   ],
-  "output": {
-    "name": "weight",
-    "type": "real"
-  },
+  "output": { "name": "weight", "type": "real" },
   "data": {
     "nodetype": "formula",
     "expression": "x*x",
     "parser": "TFormula",
-    "variables": [
-      "p"
-    ]
+    "variables": [ "p" ]
   }
 }

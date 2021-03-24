@@ -268,9 +268,10 @@ def write(corrs):
   for corr in corrs+[cset]:
     name  = corr.name if isinstance(corr,Correction) else "test_set"
     fname = "data/tau/%s.json"%(name)
-    print(">>>  ",fname)
-    with open(fname,'w') as fout:
-      fout.write(corr.json(exclude_unset=True,indent=2))
+    print(f">>>  Writing {fname}...")
+    JSONEncoder.write(corr,fname)
+    #with open(fname,'w') as fout:
+    #  fout.write(corr.json(exclude_unset=True,indent=2))
   return cset
   
 

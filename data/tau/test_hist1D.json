@@ -1,30 +1,18 @@
-{
-  "name": "test_hist1D",
+{ "name": "test_hist1D",
   "description": "Simple 1D SF",
   "version": 0,
   "inputs": [
-    {
-      "name": "eta",
+    { "name": "eta",
       "type": "real",
       "description": "tau eta"
     }
   ],
-  "output": {
-    "name": "weight",
-    "type": "real"
-  },
+  "output": { "name": "weight", "type": "real" },
   "data": {
     "nodetype": "binning",
     "input": "eta",
-    "edges": [
-      0.0,
-      1.1,
-      2.5
-    ],
-    "content": [
-      0.0,
-      1.0
-    ],
+    "edges": [ 0.0, 1.1, 2.5 ],
+    "content": [ 0.0, 1.0 ],
     "flow": "error"
   }
 }

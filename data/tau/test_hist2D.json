@@ -1,50 +1,25 @@
-{
-  "name": "test_hist2D",
+{ "name": "test_hist2D",
   "description": "Simple 2D SF",
   "version": 0,
   "inputs": [
-    {
-      "name": "eta",
+    { "name": "eta",
       "type": "real",
       "description": "tau eta"
     },
-    {
-      "name": "pt",
+    { "name": "pt",
       "type": "real",
       "description": "tau pt"
     }
   ],
-  "output": {
-    "name": "weight",
-    "type": "real"
-  },
+  "output": { "name": "weight", "type": "real" },
   "data": {
     "nodetype": "multibinning",
-    "inputs": [
-      "eta",
-      "pt"
-    ],
+    "inputs": [ "eta", "pt" ],
     "edges": [
-      [
-        0.0,
-        1.1,
-        2.5
-      ],
-      [
-        20.0,
-        50.0,
-        100.0,
-        200.0
-      ]
+      [ 0.0, 1.1, 2.5 ],
+      [ 20.0, 50.0, 100.0, 200.0 ]
     ],
-    "content": [
-      0.0,
-      1.0,
-      2.0,
-      3.0,
-      4.0,
-      5.0
-    ],
+    "content": [ 0.0, 1.0, 2.0, 3.0, 4.0, 5.0 ],
     "flow": "error"
   }
 }

@@ -1,81 +1,51 @@
-{
-  "schema_version": 2,
+{ "schema_version": 2,
   "corrections": [
-    {
-      "name": "test_hist1D",
+    { "name": "test_hist1D",
       "description": "Simple 1D SF",
       "version": 0,
       "inputs": [
-        {
-          "name": "eta",
+        { "name": "eta",
           "type": "real",
           "description": "tau eta"
         }
       ],
-      "output": {
-        "name": "weight",
-        "type": "real"
-      },
+      "output": { "name": "weight", "type": "real" },
       "data": {
         "nodetype": "binning",
         "input": "eta",
-        "edges": [
-          0.0,
-          1.1,
-          2.5
-        ],
-        "content": [
-          0.0,
-          1.0
-        ],
+        "edges": [ 0.0, 1.1, 2.5 ],
+        "content": [ 0.0, 1.0 ],
         "flow": "error"
       }
     },
-    {
-      "name": "test_hist1D_clamp",
+    { "name": "test_hist1D_clamp",
       "description": "Simple 1D SF with clamp",
       "version": 0,
       "inputs": [
-        {
-          "name": "eta",
+        { "name": "eta",
           "type": "real",
           "description": "tau eta"
         }
       ],
-      "output": {
-        "name": "weight",
-        "type": "real"
-      },
+      "output": { "name": "weight", "type": "real" },
       "data": {
         "nodetype": "binning",
         "input": "eta",
-        "edges": [
-          0.0,
-          1.1,
-          2.5
-        ],
-        "content": [
-          0.0,
-          1.0
-        ],
+        "edges": [ 0.0, 1.1, 2.5 ],
+        "content": [ 0.0, 1.0 ],
         "flow": "clamp"
       }
     },
-    {
-      "name": "test_hist1D_transform",
+    { "name": "test_hist1D_transform",
       "description": "Simple 1D SF with transformation eta = abs(eta)",
       "version": 0,
       "inputs": [
-        {
-          "name": "eta",
+        { "name": "eta",
           "type": "real",
           "description": "tau eta"
         }
       ],
-      "output": {
-        "name": "weight",
-        "type": "real"
-      },
+      "output": { "name": "weight", "type": "real" },
       "data": {
         "nodetype": "transform",
         "input": "eta",
@@ -83,233 +53,130 @@
           "nodetype": "formula",
           "expression": "abs(x)",
           "parser": "TFormula",
-          "variables": [
-            "eta"
-          ]
+          "variables": [ "eta" ]
         },
         "content": {
           "nodetype": "binning",
           "input": "eta",
-          "edges": [
-            0.0,
-            1.1,
-            2.5
-          ],
-          "content": [
-            0.0,
-            1.0
-          ],
+          "edges": [ 0.0, 1.1, 2.5 ],
+          "content": [ 0.0, 1.0 ],
           "flow": "error"
         }
       }
     },
-    {
-      "name": "test_hist2D",
+    { "name": "test_hist2D",
       "description": "Simple 2D SF",
       "version": 0,
       "inputs": [
-        {
-          "name": "eta",
+        { "name": "eta",
           "type": "real",
           "description": "tau eta"
         },
-        {
-          "name": "pt",
+        { "name": "pt",
           "type": "real",
           "description": "tau pt"
         }
       ],
-      "output": {
-        "name": "weight",
-        "type": "real"
-      },
+      "output": { "name": "weight", "type": "real" },
       "data": {
         "nodetype": "multibinning",
-        "inputs": [
-          "eta",
-          "pt"
-        ],
+        "inputs": [ "eta", "pt" ],
         "edges": [
-          [
-            0.0,
-            1.1,
-            2.5
-          ],
-          [
-            20.0,
-            50.0,
-            100.0,
-            200.0
-          ]
+          [ 0.0, 1.1, 2.5 ],
+          [ 20.0, 50.0, 100.0, 200.0 ]
         ],
-        "content": [
-          0.0,
-          1.0,
-          2.0,
-          3.0,
-          4.0,
-          5.0
-        ],
+        "content": [ 0.0, 1.0, 2.0, 3.0, 4.0, 5.0 ],
         "flow": "error"
       }
     },
-    {
-      "name": "test_hist2D_clamp",
+    { "name": "test_hist2D_clamp",
       "description": "Simple 2D SF with clamp",
       "version": 0,
       "inputs": [
-        {
-          "name": "eta",
+        { "name": "eta",
           "type": "real",
           "description": "tau eta"
         },
-        {
-          "name": "pt",
+        { "name": "pt",
           "type": "real",
           "description": "tau pt"
         }
       ],
-      "output": {
-        "name": "weight",
-        "type": "real"
-      },
+      "output": { "name": "weight", "type": "real" },
       "data": {
         "nodetype": "binning",
         "input": "eta",
-        "edges": [
-          0.0,
-          1.1,
-          2.5
-        ],
+        "edges": [ 0.0, 1.1, 2.5 ],
         "content": [
-          {
-            "nodetype": "binning",
+          { "nodetype": "binning",
             "input": "eta",
-            "edges": [
-              20.0,
-              50.0,
-              100.0,
-              200.0
-            ],
-            "content": [
-              0.0,
-              1.0,
-              2.0
-            ],
+            "edges": [ 20.0, 50.0, 100.0, 200.0 ],
+            "content": [ 0.0, 1.0, 2.0 ],
             "flow": "clamp"
           },
-          {
-            "nodetype": "binning",
+          { "nodetype": "binning",
             "input": "eta",
-            "edges": [
-              20.0,
-              50.0,
-              100.0,
-              200.0
-            ],
-            "content": [
-              3.0,
-              4.0,
-              5.0
-            ],
+            "edges": [ 20.0, 50.0, 100.0, 200.0 ],
+            "content": [ 3.0, 4.0, 5.0 ],
             "flow": "clamp"
           }
         ],
         "flow": "error"
       }
     },
-    {
-      "name": "test_category",
+    { "name": "test_category",
       "description": "Simple category with default",
       "version": 0,
       "inputs": [
-        {
-          "name": "dm",
+        { "name": "dm",
           "type": "int",
           "description": "decay mode"
         }
       ],
-      "output": {
-        "name": "weight",
-        "type": "real"
-      },
+      "output": { "name": "weight", "type": "real" },
       "data": {
         "nodetype": "category",
         "input": "dm",
         "content": [
-          {
-            "key": 0,
-            "value": 0.0
-          },
-          {
-            "key": 1,
-            "value": 1.0
-          },
-          {
-            "key": 10,
-            "value": 10.0
-          },
-          {
-            "key": 11,
-            "value": 11.0
-          }
+          { "key": 0, "value": 0.0 },
+          { "key": 1, "value": 1.0 },
+          { "key": 10, "value": 10.0 },
+          { "key": 11, "value": 11.0 }
         ],
         "default": -9.0
       }
     },
-    {
-      "name": "test_category_nodefault",
+    { "name": "test_category_nodefault",
       "description": "Simple category with no default",
       "version": 0,
       "inputs": [
-        {
-          "name": "dm",
+        { "name": "dm",
           "type": "int",
           "description": "decay mode"
         }
       ],
-      "output": {
-        "name": "weight",
-        "type": "real"
-      },
+      "output": { "name": "weight", "type": "real" },
       "data": {
         "nodetype": "category",
         "input": "dm",
         "content": [
-          {
-            "key": 0,
-            "value": 0.0
-          },
-          {
-            "key": 1,
-            "value": 1.0
-          },
-          {
-            "key": 10,
-            "value": 10.0
-          },
-          {
-            "key": 11,
-            "value": 11.0
-          }
+          { "key": 0, "value": 0.0 },
+          { "key": 1, "value": 1.0 },
+          { "key": 10, "value": 10.0 },
+          { "key": 11, "value": 11.0 }
         ]
       }
     },
-    {
-      "name": "test_category_mapping",
+    { "name": "test_category_mapping",
       "description": "Simple category with mapping 11 -> 10",
       "version": 0,
       "inputs": [
-        {
-          "name": "dm",
+        { "name": "dm",
           "type": "int",
           "description": "decay mode"
         }
       ],
-      "output": {
-        "name": "weight",
-        "type": "real"
-      },
+      "output": { "name": "weight", "type": "real" },
       "data": {
         "nodetype": "transform",
         "input": "dm",
@@ -317,22 +184,10 @@
           "nodetype": "category",
           "input": "dm",
           "content": [
-            {
-              "key": 0,
-              "value": 0.0
-            },
-            {
-              "key": 1,
-              "value": 1.0
-            },
-            {
-              "key": 10,
-              "value": 10.0
-            },
-            {
-              "key": 11,
-              "value": 10.0
-            }
+            { "key": 0, "value": 0.0 },
+            { "key": 1, "value": 1.0 },
+            { "key": 10, "value": 10.0 },
+            { "key": 11, "value": 10.0 }
           ],
           "default": -1.0
         },
@@ -340,145 +195,98 @@
           "nodetype": "category",
           "input": "dm",
           "content": [
-            {
-              "key": 0,
-              "value": 0.0
-            },
-            {
-              "key": 1,
-              "value": 1.0
-            },
-            {
-              "key": 10,
-              "value": 10.0
-            },
-            {
-              "key": 11,
-              "value": 11.0
-            }
+            { "key": 0, "value": 0.0 },
+            { "key": 1, "value": 1.0 },
+            { "key": 10, "value": 10.0 },
+            { "key": 11, "value": 11.0 }
           ],
           "default": -9.0
         }
       }
     },
-    {
-      "name": "test_formula0",
+    { "name": "test_formula0",
       "description": "Simple formula, 'x+1'",
       "version": 0,
       "inputs": [
-        {
-          "name": "p",
+        { "name": "p",
           "type": "real",
           "description": "variable"
         }
       ],
-      "output": {
-        "name": "weight",
-        "type": "real"
-      },
+      "output": { "name": "weight", "type": "real" },
       "data": {
         "nodetype": "formula",
         "expression": "x+1",
         "parser": "TFormula",
-        "variables": [
-          "p"
-        ]
+        "variables": [ "p" ]
       }
     },
-    {
-      "name": "test_formula1",
+    { "name": "test_formula1",
       "description": "Simple formula, 'x*x'",
       "version": 0,
       "inputs": [
-        {
-          "name": "p",
+        { "name": "p",
           "type": "real",
           "description": "variable"
         }
       ],
-      "output": {
-        "name": "weight",
-        "type": "real"
-      },
+      "output": { "name": "weight", "type": "real" },
       "data": {
         "nodetype": "formula",
         "expression": "x*x",
         "parser": "TFormula",
-        "variables": [
-          "p"
-        ]
+        "variables": [ "p" ]
       }
     },
-    {
-      "name": "test_formula2",
+    { "name": "test_formula2",
       "description": "Simple formula, 'x^2'",
       "version": 0,
       "inputs": [
-        {
-          "name": "p",
+        { "name": "p",
           "type": "real",
           "description": "variable"
         }
       ],
-      "output": {
-        "name": "weight",
-        "type": "real"
-      },
+      "output": { "name": "weight", "type": "real" },
       "data": {
         "nodetype": "formula",
         "expression": "x^2",
         "parser": "TFormula",
-        "variables": [
-          "p"
-        ]
+        "variables": [ "p" ]
       }
     },
-    {
-      "name": "test_formula3",
+    { "name": "test_formula3",
       "description": "Simple formula, '10^x'",
       "version": 0,
       "inputs": [
-        {
-          "name": "p",
+        { "name": "p",
           "type": "real",
           "description": "variable"
         }
       ],
-      "output": {
-        "name": "weight",
-        "type": "real"
-      },
+      "output": { "name": "weight", "type": "real" },
       "data": {
         "nodetype": "formula",
         "expression": "10^x",
         "parser": "TFormula",
-        "variables": [
-          "p"
-        ]
+        "variables": [ "p" ]
       }
     },
-    {
-      "name": "test_formula4",
+    { "name": "test_formula4",
       "description": "Simple formula, 'sqrt(x)'",
       "version": 0,
       "inputs": [
-        {
-          "name": "p",
+        { "name": "p",
           "type": "real",
           "description": "variable"
         }
       ],
-      "output": {
-        "name": "weight",
-        "type": "real"
-      },
+      "output": { "name": "weight", "type": "real" },
       "data": {
         "nodetype": "formula",
         "expression": "sqrt(x)",
         "parser": "TFormula",
-        "variables": [
-          "p"
-        ]
+        "variables": [ "p" ]
       }
     }
   ]
