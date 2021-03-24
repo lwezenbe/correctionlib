@@ -1,4 +1,5 @@
-{ "name": "test_tau_energy_scale",
+{
+  "name": "test_tau_energy_scale",
   "description": "tau energy scale center around 1, to be applied to pt, mass and energy of the reconstructed tau_h in simulated data",
   "version": 0,
   "inputs": [

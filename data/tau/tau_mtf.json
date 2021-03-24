@@ -1,4 +1,5 @@
-{ "name": "DeepTau2017v2p1VSmu_test",
+{
+  "name": "DeepTau2017v2p1VSmu_test",
   "description": "mu -> tau_h fake rate SFs for DeepTau2017v2p1VSmu",
   "version": 0,
   "inputs": [

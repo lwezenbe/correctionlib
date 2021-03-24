@@ -1,4 +1,5 @@
-{ "name": "test_DeepTau2017v2p1VSjet_pt",
+{
+  "name": "test_DeepTau2017v2p1VSjet_pt",
   "description": "pT-dependent SFs for DeepTau2017v2p1VSjet",
   "version": 0,
   "inputs": [

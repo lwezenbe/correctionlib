@@ -71,7 +71,7 @@ class JSONEncoder(json.JSONEncoder):
       else: # break long dict into multiple line
         self._indent += self.indent
         indent_str = " "*self._indent
-        first = grandparent!=dict
+        first = grandparent not in [None,dict]
         for key, value in obj.items():
           valstr = self.encode(value)
           if first and '\n' not in valstr: # no break on first
