@@ -19,9 +19,11 @@ def write(data,fname,indent=2,maxlen=25):
 class JSONEncoder(json.JSONEncoder):
   """
   Encoder to make correctionlib JSON more compact:
-  - keep list of primitives (int, float, str) on one line
-  - do not break line for simple CategoryItem dictionary if value is primitive
-  - do not break line for first key of dictionary
+  - keep list of primitives (int, float, str) on one line,
+    or split over several if the length is longer than a given maxlen
+  - do not break line for short dictionary if all values are primitive
+  - do not break line after bracket for first key of dictionary,
+    unless itself nested in dictionary
   """
   
   def __init__(self, *args, **kwargs):
