@@ -7,13 +7,13 @@
 import json, math
 
 
-def write(data,fname,indent=2,maxlen=25):
+def write(data,fname,indent=2,maxlistlen=25,maxdictlen=2):
   """Help function to quickly write JSON file."""
   with open(fname,'w') as fout:
     if isinstance(data,dict):
-      fout.write(json.dumps(data,cls=JSONEncoder,sort_keys=True,indent=indent,maxlen=maxlen))
+      fout.write(json.dumps(data,cls=JSONEncoder,sort_keys=True,indent=indent,maxlistlen=maxlistlen,maxdictlen=maxdictlen))
     else:
-      fout.write(data.json(cls=JSONEncoder,exclude_unset=True,indent=indent,maxlen=maxlen))
+      fout.write(data.json(cls=JSONEncoder,exclude_unset=True,indent=indent,maxlistlen=maxlistlen,maxdictlen=maxdictlen))
   
 
 class JSONEncoder(json.JSONEncoder):
@@ -27,7 +27,8 @@ class JSONEncoder(json.JSONEncoder):
   """
   
   def __init__(self, *args, **kwargs):
-    self.maxlen = kwargs.pop('maxlen',25) # maximum of primitive elements per list, before breaking lines
+    self.maxdictlen = kwargs.pop('maxdictlen',25) # maximum of primitive elements per list, before breaking lines
+    self.maxlistlen = kwargs.pop('maxlistlen',25) # maximum of primitive elements per list, before breaking lines
     super(JSONEncoder,self).__init__(*args,**kwargs)
     self._indent = 0 # current indent
     self.parent = None # type of parent for recursive use
@@ -38,8 +39,8 @@ class JSONEncoder(json.JSONEncoder):
     if isinstance(obj,(list,tuple)):
       output = [ ]
       if all(isinstance(x,(int,float,str)) for x in obj): # list of primitives only
-        if len(obj)>self.maxlen: # break long list into multiple lines
-          nlines = math.ceil(len(obj)/float(self.maxlen))
+        if len(obj)>self.maxlistlen: # break long list into multiple lines
+          nlines = math.ceil(len(obj)/float(self.maxlistlen))
           maxlen = int(len(obj)/nlines)
           indent_str = ' '*(self._indent+self.indent)
           for i in range(0,nlines):
@@ -65,7 +66,7 @@ class JSONEncoder(json.JSONEncoder):
         retval = "[\n"+",\n".join(output)+"\n"+indent_str+"]"
     elif isinstance(obj,dict):
       output = [ ]
-      if len(obj)==2 and all(isinstance(obj[k],(int,float,str)) for k in obj): # write short dict on one line
+      if len(obj)<=self.maxdictlen and all(isinstance(obj[k],(int,float,str)) for k in obj): # write short dict on one line
         retval = "{ "+", ".join(json.dumps(k)+": "+self.encode(obj[k]) for k in obj)+" }"
       else: # break long dict into multiple line
         self._indent += self.indent
@@ -95,7 +96,9 @@ if __name__ == '__main__':
         'layer3_1': [{"x":1,"y":7}, {"x":0,"y":4}, {"x":5,"y":3},
                      {"x":6,"y":9}, {'key': 'foo', 'value': 1},
                      {'key': 'foo', 'value': {k: v for v, k in enumerate('abcd')}},
+                     {k: v for v, k in enumerate('ab')},
                      {k: v for v, k in enumerate('abc')},
+                     {k: v for v, k in enumerate('abcd')},
                      {k: {k2: v2 for v2, k2 in enumerate('ab')} for k in 'ab'}],
         'layer3_2': 'string',
         'layer3_3': [{"x":2,"y":8,"z":3}, {"x":1,"y":5,"z":4},
@@ -120,7 +123,7 @@ if __name__ == '__main__':
     }
   }
   fname = "test_JSONEncoder.json"
-  print(json.dumps(data,cls=JSONEncoder,sort_keys=True,indent=2,maxlen=25)) # print
+  print(json.dumps(data,cls=JSONEncoder,sort_keys=True,indent=2,maxlistlen=25,maxdictlen=3)) # print
   print(f">>> Writing {fname}...")
   write(data,fname) # write
   print(f">>> Loading {fname}...")
