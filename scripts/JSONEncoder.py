@@ -4,8 +4,17 @@
 # Adapted from:
 #   https://stackoverflow.com/questions/13249415/how-to-implement-custom-indentation-when-pretty-printing-with-the-json-module
 #   https://stackoverflow.com/questions/16264515/json-dumps-custom-formatting
-import json
+import json, math
 
+
+def write(data,fname,indent=2,maxlen=25):
+  """Help function to quickly write JSON file."""
+  with open(fname,'w') as fout:
+    if isinstance(data,dict):
+      fout.write(json.dumps(data,cls=JSONEncoder,sort_keys=True,indent=indent,maxlen=maxlen))
+    else:
+      fout.write(data.json(cls=JSONEncoder,exclude_unset=True,indent=indent,maxlen=maxlen))
+  
 
 class JSONEncoder(json.JSONEncoder):
   """
@@ -16,54 +25,65 @@ class JSONEncoder(json.JSONEncoder):
   """
   
   def __init__(self, *args, **kwargs):
-    super(JSONEncoder,self).__init__(*args, **kwargs)
-    self.current_indent = 0
-    self.current_indent_str = ""
-    self.nobreak = True # for first key in dict
+    self.maxlen = kwargs.pop('maxlen',25) # maximum of primitive elements per list, before breaking lines
+    super(JSONEncoder,self).__init__(*args,**kwargs)
+    self._indent = 0 # current indent
+    self.parent = None # type of parent for recursive use
   
   def encode(self, obj):
-    # Special Processing for lists of primitives
+    grandparent = self.parent
+    self.parent = type(obj)
     if isinstance(obj,(list,tuple)):
       output = [ ]
-      #if not any(isinstance(x,(list,tuple,dict)) for x in obj):
-      if all(isinstance(x,(int,float,str)) for x in obj): # primitives
+      if all(isinstance(x,(int,float,str)) for x in obj): # list of primitives only
+        if len(obj)>self.maxlen: # break long list into multiple lines
+          nlines = math.ceil(len(obj)/float(self.maxlen))
+          maxlen = int(len(obj)/nlines)
+          indent_str = ' '*(self._indent+self.indent)
+          for i in range(0,nlines):
+            line = [ ]
+            for item in obj[i*maxlen:(i+1)*maxlen]:
+              line.append(json.dumps(item))
+            output.append(", ".join(line))
+          if grandparent==dict: # break first line
+            retval = "[\n"+indent_str+(",\n"+indent_str).join(output)+"\n"+' '*self._indent+"]"
+          else: # do not break first line
+            retval = "["+' '*(self.indent-1)+(",\n"+indent_str).join(output)+"\n"+' '*self._indent+"]"
+        else: # write short list on one line
+          for item in obj:
+            output.append(json.dumps(item))
+          retval = "[ "+", ".join(output)+" ]"
+      else: # list of lists, tuples, dictionaries
+        self._indent += self.indent
+        indent_str = " "*self._indent
         for item in obj:
-          output.append(json.dumps(item))
-        return "[ "+", ".join(output)+" ]"
-      else:
-        self.current_indent += self.indent
-        self.current_indent_str = "".join([" " for x in range(self.current_indent)])
-        for item in obj:
-          output.append(self.current_indent_str+self.encode(item))
-        self.current_indent -= self.indent
-        self.current_indent_str = "".join([" " for x in range(self.current_indent)])
-        return "[\n"+",\n".join(output)+"\n"+self.current_indent_str+"]"
+          output.append(indent_str+self.encode(item))
+        self._indent -= self.indent
+        indent_str = " "*self._indent
+        retval = "[\n"+",\n".join(output)+"\n"+indent_str+"]"
     elif isinstance(obj,dict):
       output = [ ]
-      if len(obj)==2 and all(isinstance(obj[k],(int,float,str)) for k in obj):
-        return "{ "+", ".join(json.dumps(k)+": "+self.encode(obj[k]) for k in obj)+" }"
-      else:
-        self.current_indent += self.indent
-        self.current_indent_str = "".join([" " for x in range(self.current_indent)])
-        first = self.nobreak
+      if len(obj)==2 and all(isinstance(obj[k],(int,float,str)) for k in obj): # write short dict on one line
+        retval = "{ "+", ".join(json.dumps(k)+": "+self.encode(obj[k]) for k in obj)+" }"
+      else: # break long dict into multiple line
+        self._indent += self.indent
+        indent_str = " "*self._indent
+        first = grandparent!=dict
         for key, value in obj.items():
-          if first and not isinstance(value,(list,tuple,dict)): # no break on first
-            row = ' '*(self.indent-1)+json.dumps(key)+": "+self.encode(value)
+          valstr = self.encode(value)
+          if first and '\n' not in valstr: # no break on first
+            row = ' '*(self.indent-1)+json.dumps(key)+": "+valstr
           else:
-            self.nobreak = not isinstance(value,dict) # no break on first
-            row = '\n'+self.current_indent_str+json.dumps(key)+": "+self.encode(value)
-            self.nobreak = True
+            row = '\n'+indent_str+json.dumps(key)+": "+valstr
           output.append(row)
           first = False
-        self.current_indent -= self.indent
-        self.current_indent_str = "".join([" " for x in range(self.current_indent)])
-        return "{"+",".join(output)+"\n"+self.current_indent_str+"}"
-    return json.dumps(obj)
-    
-
-def write(corr,fname,indent=2):
-  with open(fname,'w') as fout:
-    fout.write(corr.json(exclude_unset=True,cls=JSONEncoder,indent=indent))
+        self._indent -= self.indent
+        indent_str = " "*self._indent
+        retval = "{"+",".join(output)+"\n"+indent_str+"}"
+    else:
+      retval = json.dumps(obj)
+    self.parent = grandparent
+    return retval
   
 
 if __name__ == '__main__':
@@ -78,10 +98,31 @@ if __name__ == '__main__':
         'layer3_2': 'string',
         'layer3_3': [{"x":2,"y":8,"z":3}, {"x":1,"y":5,"z":4},
                      {"x":6,"y":9,"z":8}],
-        'layer3_4': list(range(20)),
-        'layer3_5': ['a','b','c'],
+        'layer3_4': [
+          list(range(10)),
+          list(range(20)),
+          list(range(24)),
+          list(range(25)),
+          list(range(26)),
+          list(range(27)),
+          list(range(30)),
+          list(range(40)),
+          list(range(50)),
+          list(range(51)),
+          list(range(52)),
+        ],
+        'layer3_5': list(range(20)),
+        'layer3_6': list(range(40)),
+        'layer3_7': ['a','b','c'],
       }
     }
   }
-  print(json.dumps(data,cls=JSONEncoder,sort_keys=True,indent=2))
+  fname = "test_JSONEncoder.json"
+  print(json.dumps(data,cls=JSONEncoder,sort_keys=True,indent=2,maxlen=25)) # print
+  print(f">>> Writing {fname}...")
+  write(data,fname) # write
+  print(f">>> Loading {fname}...")
+  with open(fname) as fin: # load
+    data2 = json.load(fin)
+  #print(json.dumps(data2,cls=JSONEncoder,sort_keys=True,indent=2)) # print
   
