@@ -6,12 +6,14 @@
 # Sources:
 #   https://github.com/cms-tau-pog/TauIDSFs/blob/master/utils/createSFFiles.py
 #   https://github.com/cms-nanoAOD/correctionlib/blob/master/tests/test_core.py
+#   https://stackoverflow.com/questions/13249415/how-to-implement-custom-indentation-when-pretty-printing-with-the-json-module
 import sys; sys.path.append('src')
 assert sys.version_info>=(3,8),"Python version must be newer than 3.8, currently %s.%s"%(sys.version_info[:2])
 import correctionlib._core as core
 import correctionlib.schemav2 as schema
 from correctionlib.schemav2 import Correction, CorrectionSet
 import json, jsonschema
+import JSONEncoder
 
 
 def header(string):

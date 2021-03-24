@@ -1,0 +1,199 @@
+{ "name": "test_DeepTau2017v2p1VSjet_dm",
+  "description": "DM-dependent SFs for DeepTau2017v2p1VSjet",
+  "version": 0,
+  "inputs": [
+    { "name": "dm",
+      "type": "int",
+      "description": "tau decay mode (0, 1, 10, or 11)"
+    },
+    { "name": "genmatch",
+      "type": "int",
+      "description": "genmatch (0 or 6: no match, jet, 1 or 3: electron, 2 or 4: muon, 5: real tau"
+    },
+    { "name": "wp",
+      "type": "string",
+      "description": "DeepTauVSjet WP: VVVLoose-VVTight"
+    },
+    { "name": "syst",
+      "type": "string",
+      "description": "systematic 'nom', 'up', 'down'"
+    }
+  ],
+  "output": { "name": "weight", "type": "real" },
+  "data": {
+    "nodetype": "category",
+    "input": "genmatch",
+    "content": [
+      { "key": 1, "value": 1.0 },
+      { "key": 2, "value": 1.0 },
+      { "key": 3, "value": 1.0 },
+      { "key": 4, "value": 1.0 },
+      { "key": 5,
+        "value": {
+          "nodetype": "category",
+          "input": "wp",
+          "content": [
+            { "key": "Loose",
+              "value": {
+                "nodetype": "category",
+                "input": "dm",
+                "content": [
+                  { "key": 0,
+                    "value": {
+                      "nodetype": "category",
+                      "input": "syst",
+                      "content": [
+                        { "key": "nom", "value": 1.0 },
+                        { "key": "up", "value": 0.2 },
+                        { "key": "down", "value": 0.2 }
+                      ]
+                    }
+                  },
+                  { "key": 1,
+                    "value": {
+                      "nodetype": "category",
+                      "input": "syst",
+                      "content": [
+                        { "key": "nom", "value": 1.0 },
+                        { "key": "up", "value": 0.2 },
+                        { "key": "down", "value": 0.2 }
+                      ]
+                    }
+                  },
+                  { "key": 10,
+                    "value": {
+                      "nodetype": "category",
+                      "input": "syst",
+                      "content": [
+                        { "key": "nom", "value": 1.0 },
+                        { "key": "up", "value": 0.2 },
+                        { "key": "down", "value": 0.2 }
+                      ]
+                    }
+                  },
+                  { "key": 11,
+                    "value": {
+                      "nodetype": "category",
+                      "input": "syst",
+                      "content": [
+                        { "key": "nom", "value": 1.0 },
+                        { "key": "up", "value": 0.2 },
+                        { "key": "down", "value": 0.2 }
+                      ]
+                    }
+                  }
+                ]
+              }
+            },
+            { "key": "Medium",
+              "value": {
+                "nodetype": "category",
+                "input": "dm",
+                "content": [
+                  { "key": 0,
+                    "value": {
+                      "nodetype": "category",
+                      "input": "syst",
+                      "content": [
+                        { "key": "nom", "value": 1.0 },
+                        { "key": "up", "value": 0.2 },
+                        { "key": "down", "value": 0.2 }
+                      ]
+                    }
+                  },
+                  { "key": 1,
+                    "value": {
+                      "nodetype": "category",
+                      "input": "syst",
+                      "content": [
+                        { "key": "nom", "value": 1.0 },
+                        { "key": "up", "value": 0.2 },
+                        { "key": "down", "value": 0.2 }
+                      ]
+                    }
+                  },
+                  { "key": 10,
+                    "value": {
+                      "nodetype": "category",
+                      "input": "syst",
+                      "content": [
+                        { "key": "nom", "value": 1.0 },
+                        { "key": "up", "value": 0.2 },
+                        { "key": "down", "value": 0.2 }
+                      ]
+                    }
+                  },
+                  { "key": 11,
+                    "value": {
+                      "nodetype": "category",
+                      "input": "syst",
+                      "content": [
+                        { "key": "nom", "value": 1.0 },
+                        { "key": "up", "value": 0.2 },
+                        { "key": "down", "value": 0.2 }
+                      ]
+                    }
+                  }
+                ]
+              }
+            },
+            { "key": "Tight",
+              "value": {
+                "nodetype": "category",
+                "input": "dm",
+                "content": [
+                  { "key": 0,
+                    "value": {
+                      "nodetype": "category",
+                      "input": "syst",
+                      "content": [
+                        { "key": "nom", "value": 1.0 },
+                        { "key": "up", "value": 0.2 },
+                        { "key": "down", "value": 0.2 }
+                      ]
+                    }
+                  },
+                  { "key": 1,
+                    "value": {
+                      "nodetype": "category",
+                      "input": "syst",
+                      "content": [
+                        { "key": "nom", "value": 1.0 },
+                        { "key": "up", "value": 0.2 },
+                        { "key": "down", "value": 0.2 }
+                      ]
+                    }
+                  },
+                  { "key": 10,
+                    "value": {
+                      "nodetype": "category",
+                      "input": "syst",
+                      "content": [
+                        { "key": "nom", "value": 1.0 },
+                        { "key": "up", "value": 0.2 },
+                        { "key": "down", "value": 0.2 }
+                      ]
+                    }
+                  },
+                  { "key": 11,
+                    "value": {
+                      "nodetype": "category",
+                      "input": "syst",
+                      "content": [
+                        { "key": "nom", "value": 1.0 },
+                        { "key": "up", "value": 0.2 },
+                        { "key": "down", "value": 0.2 }
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      { "key": 6, "value": 1.0 },
+      { "key": 0, "value": 1.0 }
+    ]
+  }
+}

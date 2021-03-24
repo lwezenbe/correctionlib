@@ -77,7 +77,7 @@ def test_tes(corrs):
   tesdata = { # category:dm -> category:syst
     'nodetype': 'category', # category:dm
     'input': "dm",
-    'default': 1.0, # default TES if unrecognized DM
+    #'default': 1.0, # no default: throw error if unsupported DM
     'content': [ # key:dm
       { 'key': dm,
         'value': {
@@ -93,7 +93,7 @@ def test_tes(corrs):
   fesdata = { # category:dm -> transform:eta -> binning:eta -> category:syst
     'nodetype': 'category', # category:dm
     'input': "dm",
-    'default': 1.0, # default FES
+    #'default': 1.0, # no default: throw error if unsupported DM
     'content': [ # key:dm
       { 'key': dm,
         'value': {
@@ -123,6 +123,9 @@ def test_tes(corrs):
           } # binning:eta
         } # transform:eta
       } for dm in fesdms
+    ]+[
+      { 'key': 10, 'value': 1.0 },
+      { 'key': 11, 'value': 1.0 },
     ] # key:dm
   } # category:dm
   
@@ -130,8 +133,8 @@ def test_tes(corrs):
   mesdata = {
     'nodetype': 'category', # category:syst
     'input': "syst",
-    'default': 1.0,
     'content': [
+      { 'key': 'nom',  'value': 1.00 },
       { 'key': 'up',   'value': 1.01 },
       { 'key': 'down', 'value': 0.99 },
     ]
@@ -146,20 +149,22 @@ def test_tes(corrs):
       {'name': "pt",       'type': "real",   'description': "tau pt"},
       {'name': "eta",      'type': "real",   'description': "tau eta"},
       {'name': "dm",       'type': "int",    'description': "tau decay mode (0, 1, 10, or 11)"},
-      {'name': "genmatch", 'type': "int",    'description': "genmatch (0 or 6: no match, jet, 1 or 3: electron, 2 or 4: muon, 5: real tau"},
+      {'name': "genmatch", 'type': "int",    'description': "genmatch (0 or 6: no match or jet, 1 or 3: electron, 2 or 4: muon, 5: real tau"},
       {'name': "syst",     'type': "string", 'description': "systematic 'nom', 'up', 'down'"},
     ],
     'output': {'name': "weight", 'type': "real"},
     'data': { # category:genmatch -> key:genmatch
       'nodetype': 'category', # category:genmatch
       'input': "genmatch",
-      'default': 1.0, # default TES if unrecognized genmatch
+      #'default': 1.0, # no default: throw error if unrecognized genmatch
       'content': [
         { 'key': 1, 'value': fesdata }, # e  -> tau_h fake
         { 'key': 2, 'value': mesdata }, # mu -> tau_h fake
         { 'key': 3, 'value': fesdata }, # e  -> tau_h fake
         { 'key': 4, 'value': mesdata }, # mu -> tau_h fake
         { 'key': 5, 'value': tesdata }, # real tau_h
+        { 'key': 6, 'value': 1.0 }, # j  -> tau_h fake
+        { 'key': 0, 'value': 1.0 }, # j  -> tau_h fake
       ]
     } # category:genmatch
   })
@@ -168,8 +173,7 @@ def test_tes(corrs):
   print(corr)
   #print(corr.data.content)
   print(f">>> Writing {fname}...")
-  with open(fname,'w') as fout:
-    fout.write(corr.json(exclude_unset=True,indent=2))
+  JSONEncoder.write(corr,fname)
   corrs.append(corr)
   
 
@@ -177,17 +181,20 @@ def evaluate(corrs):
   header("Evaluate")
   cset_py, cset = wrap(corrs) # wrap to create C++ object that can be evaluated
   ptbins  = [10.,20.,30.,100.,170.,500.,2000.]
-  etabins = [-2.0,-1.0,0.0,1.1,2.0,2.5,2.6]
+  etabins = [-2.0,-1.0,0.0,1.1,2.0,2.5,3.0]
+  gms     = [0,1,2,3,4,5,6,7]
+  dms     = [0,1,2,5,10,11]
   for name in list(cset):
     corr = cset[name]
     print(f">>>\n>>> {name}: {corr.description}")
     #print(corr.inputs)
-    for gm in [0,1,2,3,4,5,6]:
+    for gm in gms:
       xbins = ptbins if gm==5 else etabins
-      ttype = "real tau_h" if gm==5 else "e -> tau_h" if gm in [1,3] else "mu -> tau_h" if gm in [2,4] else "j -> tau_h"
+      ttype = "real tau_h" if gm==5 else "e -> tau_h" if gm in [1,3] else\
+              "mu -> tau_h" if gm in [2,4] else "j -> tau_h" if gm in [0,6] else "non-existent"
       print(f">>>\n>>> genmatch={gm}: {ttype}")
       print(">>> %5s"%("dm")+" ".join("  %-15.1f"%(x) for x in xbins))
-      for dm in [0,1,2,10,11]:
+      for dm in dms:
         row   = ">>> %5d"%(dm)
         for x in xbins:
           pt, eta = (x,1.5) if gm==5 else (20.,x)
