@@ -32,7 +32,7 @@ POG/TAU/tau.json
 
 ## Structure of e -> tau fake rate SFs
 One correction object per year and ID,
-see [`scripts/tau_ltf.py`](../../scripts/tau_ltf.py) and [tau_etf.json](tau_etf.json).
+see [`scripts/tau_ltf.py`](../../scripts/tau_ltf.py) and [`tau_etf.json`](tau_etf.json).
 An error is thrown if
 * `genmatch` is not in `[0,1,2,3,4,5,6]`.
 * `wp` is not valid.
