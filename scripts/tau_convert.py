@@ -3,7 +3,7 @@
 # Description: Script to play around with different formats, writing, reading, evaluating and validating.
 # Instructions: Download old SF files and run:
 #   svn checkout https://github.com/cms-tau-pog/TauIDSFs/trunk/data data/tau/old
-#   ./scripts/tau_convert.py data/tau/old/*root
+#   ./scripts/tau_convert.py data/tau/old/*root -v1
 # Sources:
 #   https://github.com/cms-tau-pog/TauIDSFs/blob/master/utils/createSFFiles.py
 #   https://github.com/cms-nanoAOD/correctionlib/blob/master/tests/test_core.py
@@ -70,6 +70,11 @@ def main(args):
         infiles['tes'].setdefault(era,{ }).setdefault(id,{ })['ele'] = fname
         continue
     print(f">>> {fname}: Did not recognize file! Ignoring...")
+  for era in infiles['tes']: # reuse e -> tau_h ES from DeepTau
+    for id in infiles['tes'][era]:
+      if "DeepTau" not in id and 'ele' not in infiles['tes'][era][id] and\
+         infiles['tes'][era].get("DeepTau2017v2p1",{ }).get('ele',False):
+        infiles['tes'][era][id]['ele'] = infiles['tes'][era]["DeepTau2017v2p1"]['ele']
   if verbosity>0:
     print(JSONEncoder.dumps(infiles)) # print all categorized files
   
@@ -197,13 +202,17 @@ def main(args):
   # TAU ENERGY SCALES
   for era in infiles['tes']:
     for id in infiles['tes'][era]:
-      if "DeepTau" not in id and 'ele' not in infiles['tes'][era][id] and infiles['tes'][era]["DeepTau2017v2p1VSe"]['ele']:
-        infiles['tes'][era][id]['ele'] = infiles['tes'][era]["DeepTau2017v2p1VSe"]['ele']
       assert all(k in infiles['tes'][era][id] for k in ['low','high','ele']), f"Not all files are present: {infiles['tes'][era][id]}"
       fname_low  = infiles['tes'][era][id]['low']
       fname_high = infiles['tes'][era][id]['high']
       fname_ele  = infiles['tes'][era][id]['ele']
-      print(f">>> {era}: {id} energy scales from {fname}")
+      print(f">>> {era}: {id} energy scales from\n"
+            f">>>   {fname_low}\n"
+            f">>>   {fname_high}\n"
+            f">>>   {fname_ele}\n")
+      tes_low = { } # DM-dependent
+      tes_high = { } # DM-dependent
+      tes_low = [ ] # eta-dependent
 
 
 if __name__ == '__main__':
