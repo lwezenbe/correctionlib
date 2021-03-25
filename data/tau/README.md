@@ -32,7 +32,7 @@ POG/TAU/tau.json
 
 ## Structure of e -> tau fake rate SFs
 One correction object per year and ID,
-see [`scripts/tau_ltf.py`](../../scripts/tau_ltf.py) and [`tau_etf.json`](tau_etf.json).
+see [`scripts/tau_ltf.py`](../../scripts/tau_ltf.py) and [`test_tau_etf.json`](test_tau_etf.json).
 An error is thrown if
 * `genmatch` is not in `[0,1,2,3,4,5,6]`.
 * `wp` is not valid.
@@ -53,7 +53,7 @@ year
 
 ## Structure of mu -> tau fake rate SFs
 One correction object per year and ID,
-see [`scripts/tau_ltf.py`](../../scripts/tau_ltf.py) and [`tau_mtf.json`](tau_mtf.json).
+see [`scripts/tau_ltf.py`](../../scripts/tau_ltf.py) and [`test_tau_mtf.json`](test_tau_mtf.json).
 An error is thrown if
 * `genmatch` is not in `[0,1,2,3,4,5,6]`.
 * `wp` is not valid.
@@ -74,7 +74,7 @@ year
 
 ## Structure of real tau efficiency rate SFs
 One correction object per year and ID,
-see [`scripts/tau_tid.py`](../../scripts/tau_tid.py), [`tau_tid_pt.json`](tau_tid_pt.json) and [`tau_tid_dm.json`](tau_tid_dm.json).
+see [`scripts/tau_tid.py`](../../scripts/tau_tid.py), [`test_tau_tid_pt.json`](test_tau_tid_pt.json) and [`test_tau_tid_dm.json`](test_tau_tid_dm.json).
 Users can choose either pT- __or__ DM-dependent SFs.
 An error is thrown if
 * `genmatch` is not in `[0,1,2,3,4,5,6]`.
@@ -116,7 +116,7 @@ year
 
 ## Structure of tau energy scales
 One correction object per year and ID,
-see [`scripts/tau_tes.py`](../../scripts/tau_tes.py) and [`tau_tes_dm.json`](tau_tes.json).
+see [`scripts/tau_tes.py`](../../scripts/tau_tes.py) and [`test_tau_tes_dm.json`](test_tau_tes.json).
 An error is thrown if
 * `genmatch` is not in `[0,1,2,3,4,5,6]`.
 * `dm` is not in `[0,1,10,11]` (and `genmatch==5`).

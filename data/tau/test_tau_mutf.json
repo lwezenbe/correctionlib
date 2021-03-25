@@ -1,6 +1,6 @@
 {
-  "name": "DeepTau2017v2p1VSe_test",
-  "description": "e -> tau_h fake rate SFs for DeepTau2017v2p1VSe",
+  "name": "DeepTau2017v2p1VSmu_test",
+  "description": "mu -> tau_h fake rate SFs for DeepTau2017v2p1VSmu",
   "version": 0,
   "inputs": [
     { "name": "eta",
@@ -26,7 +26,8 @@
     "input": "genmatch",
     "content": [
       { "key": 0, "value": 1.0 },
-      { "key": 1,
+      { "key": 1, "value": 1.0 },
+      { "key": 2,
         "value": {
           "nodetype": "category",
           "input": "wp",
@@ -44,8 +45,24 @@
                 "content": {
                   "nodetype": "binning",
                   "input": "eta",
-                  "edges": [ 0.0, 1.46, 1.558, 2.3 ],
+                  "edges": [ 0.0, 0.4, 0.8, 1.2, 1.7, 2.3 ],
                   "content": [
+                    { "nodetype": "category",
+                      "input": "syst",
+                      "content": [
+                        { "key": "nom", "value": 1.0 },
+                        { "key": "up", "value": 1.1 },
+                        { "key": "down", "value": 0.9 }
+                      ]
+                    },
+                    { "nodetype": "category",
+                      "input": "syst",
+                      "content": [
+                        { "key": "nom", "value": 1.0 },
+                        { "key": "up", "value": 1.1 },
+                        { "key": "down", "value": 0.9 }
+                      ]
+                    },
                     { "nodetype": "category",
                       "input": "syst",
                       "content": [
@@ -88,8 +105,24 @@
                 "content": {
                   "nodetype": "binning",
                   "input": "eta",
-                  "edges": [ 0.0, 1.46, 1.558, 2.3 ],
+                  "edges": [ 0.0, 0.4, 0.8, 1.2, 1.7, 2.3 ],
                   "content": [
+                    { "nodetype": "category",
+                      "input": "syst",
+                      "content": [
+                        { "key": "nom", "value": 1.0 },
+                        { "key": "up", "value": 1.1 },
+                        { "key": "down", "value": 0.9 }
+                      ]
+                    },
+                    { "nodetype": "category",
+                      "input": "syst",
+                      "content": [
+                        { "key": "nom", "value": 1.0 },
+                        { "key": "up", "value": 1.1 },
+                        { "key": "down", "value": 0.9 }
+                      ]
+                    },
                     { "nodetype": "category",
                       "input": "syst",
                       "content": [
@@ -132,8 +165,24 @@
                 "content": {
                   "nodetype": "binning",
                   "input": "eta",
-                  "edges": [ 0.0, 1.46, 1.558, 2.3 ],
+                  "edges": [ 0.0, 0.4, 0.8, 1.2, 1.7, 2.3 ],
                   "content": [
+                    { "nodetype": "category",
+                      "input": "syst",
+                      "content": [
+                        { "key": "nom", "value": 1.0 },
+                        { "key": "up", "value": 1.1 },
+                        { "key": "down", "value": 0.9 }
+                      ]
+                    },
+                    { "nodetype": "category",
+                      "input": "syst",
+                      "content": [
+                        { "key": "nom", "value": 1.0 },
+                        { "key": "up", "value": 1.1 },
+                        { "key": "down", "value": 0.9 }
+                      ]
+                    },
                     { "nodetype": "category",
                       "input": "syst",
                       "content": [
@@ -166,8 +215,8 @@
           ]
         }
       },
-      { "key": 2, "value": 1.0 },
-      { "key": 3,
+      { "key": 3, "value": 1.0 },
+      { "key": 4,
         "value": {
           "nodetype": "category",
           "input": "wp",
@@ -185,8 +234,24 @@
                 "content": {
                   "nodetype": "binning",
                   "input": "eta",
-                  "edges": [ 0.0, 1.46, 1.558, 2.3 ],
+                  "edges": [ 0.0, 0.4, 0.8, 1.2, 1.7, 2.3 ],
                   "content": [
+                    { "nodetype": "category",
+                      "input": "syst",
+                      "content": [
+                        { "key": "nom", "value": 1.0 },
+                        { "key": "up", "value": 1.1 },
+                        { "key": "down", "value": 0.9 }
+                      ]
+                    },
+                    { "nodetype": "category",
+                      "input": "syst",
+                      "content": [
+                        { "key": "nom", "value": 1.0 },
+                        { "key": "up", "value": 1.1 },
+                        { "key": "down", "value": 0.9 }
+                      ]
+                    },
                     { "nodetype": "category",
                       "input": "syst",
                       "content": [
@@ -229,8 +294,24 @@
                 "content": {
                   "nodetype": "binning",
                   "input": "eta",
-                  "edges": [ 0.0, 1.46, 1.558, 2.3 ],
+                  "edges": [ 0.0, 0.4, 0.8, 1.2, 1.7, 2.3 ],
                   "content": [
+                    { "nodetype": "category",
+                      "input": "syst",
+                      "content": [
+                        { "key": "nom", "value": 1.0 },
+                        { "key": "up", "value": 1.1 },
+                        { "key": "down", "value": 0.9 }
+                      ]
+                    },
+                    { "nodetype": "category",
+                      "input": "syst",
+                      "content": [
+                        { "key": "nom", "value": 1.0 },
+                        { "key": "up", "value": 1.1 },
+                        { "key": "down", "value": 0.9 }
+                      ]
+                    },
                     { "nodetype": "category",
                       "input": "syst",
                       "content": [
@@ -273,8 +354,24 @@
                 "content": {
                   "nodetype": "binning",
                   "input": "eta",
-                  "edges": [ 0.0, 1.46, 1.558, 2.3 ],
+                  "edges": [ 0.0, 0.4, 0.8, 1.2, 1.7, 2.3 ],
                   "content": [
+                    { "nodetype": "category",
+                      "input": "syst",
+                      "content": [
+                        { "key": "nom", "value": 1.0 },
+                        { "key": "up", "value": 1.1 },
+                        { "key": "down", "value": 0.9 }
+                      ]
+                    },
+                    { "nodetype": "category",
+                      "input": "syst",
+                      "content": [
+                        { "key": "nom", "value": 1.0 },
+                        { "key": "up", "value": 1.1 },
+                        { "key": "down", "value": 0.9 }
+                      ]
+                    },
                     { "nodetype": "category",
                       "input": "syst",
                       "content": [
@@ -307,7 +404,6 @@
           ]
         }
       },
-      { "key": 4, "value": 1.0 },
       { "key": 5, "value": 1.0 },
       { "key": 6, "value": 1.0 }
     ]

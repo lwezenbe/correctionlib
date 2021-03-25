@@ -12,16 +12,16 @@ from utils import *
 
 
 def maketid(sfs,ibin,syst='nom'):
-  """Interpolate."""
+  """Interpolate for second to last bin."""
   # f = TFormula('f',sf)
   # for x in [10,20,29,30,31,35,45,100,200,499,500,501,750,999,1000,1001,1500,2000]: x, f.Eval(x)
   # "x<20?0: x<25?1.00: x<30?1.01: x<35?1.02: x<40?1.03: 1.04"
   # "x<20?0: x<25?1.10: x<30?1.11: x<35?1.12: x<40?1.13: x<500?1.14: x<1000?1.04+0.2*x/500.: 1.44"
   # "x<20?0: x<25?0.90: x<30?0.91: x<35?0.92: x<40?0.93: x<500?0.94: x<1000?1.04-0.2*x/500.: 0.64"
   if syst=='nom':
-    sf = sfs[ibin][0]
+    sf = sfs[0]
   else:
-    sfnom, sfup, sfdown = sfs[ibin]
+    sfnom, sfup, sfdown = sfs
     if ibin<5: # pt < 500
       sf = sfnom-sfdown if syst=='down' else sfnom+sfup
     elif ibin==5: # 500 < pt < 1000
@@ -37,28 +37,43 @@ def maketid(sfs,ibin,syst='nom'):
   return sf
   
 
-def test_tid_pt(corrs):
+def makecorr_tid_pt(sfs=None,fname="data/tau/test_tau_tid_pt.json",**kwargs):
   """Tau ID SF, pT-dependent."""
   header("Tau DeepTauVSjet SF, pT-dependent")
-  fname   = "data/tau/tau_tid_pt.json"
-  wps     = [
-    #'VVVLoose', 'VVLoose', 'VLoose',
-    'Loose', 'Medium', 'Tight',
-    #'VTight', 'VVTight'
-  ]
-  ptbins  = [20.,25.,30.,35.,40.,500.,1000.,2000.]
-  nptbins = len(ptbins)-1
-  sfs     = {wp: [(1.,0.2,0.2) for i in range(nptbins)] for wp in wps}
+  verb    = kwargs.get('verb',0)
+  ptbins  = kwargs.get('bins',[20.,25.,30.,35.,40.,500.,1000.,2000.])
+  if sfs:
+    id    = kwargs.get('id',   "unkown")
+    era   = kwargs.get('era',  "unkown")
+    name  = kwargs.get('name', f"tau_sf_pt_{id}_{era}")
+    fname = kwargs.get('fname',f"data/tau/{name}.json")
+    info  = kwargs.get('info', f"pT-dependent SFs for {id} in {era}")
+    wps   = list(sfs.keys())
+  else: # test format with dummy values
+    id    = kwargs.get('id',  "DeepTau2017v2p1VSjet")
+    name  = kwargs.get('name', f"test_{id}_pt")
+    fname = kwargs.get('fname',f"data/tau/test_tau_pt.json")
+    info  = kwargs.get('info', f"pT-dependent SFs for {id}")
+    wps   = [
+      #'VVVLoose', 'VVLoose', 'VLoose',
+      'Loose', 'Medium', 'Tight',
+      #'VTight', 'VVTight'
+    ]
+    sfs   = {wp: [(1.,0.2,0.2) for i in range(len(ptbins)-1)] for wp in wps}
+  assert all(len(sfs[w])==len(ptbins)-1 for w in sfs), f"Number of SFs ({sfs}) does not match ({len(ptbins)-1})!"
+  assert ptbins[-3]==500., f"Third-to-last bin ({ptbins[-3]}) should be 500!"
+  assert ptbins[-2]==1000., f"Second-to-last bin ({ptbins[-2]}) should be 1000!"
+  assert ptbins[-1]>1000., f"Last bin ({ptbins[-1]}) should be larger than 1000!"
+  wps.sort(key=wp_sortkey)
   corr    = Correction.parse_obj({
     'version': 0,
     'name':    "test_DeepTau2017v2p1VSjet_pt",
     'description': "pT-dependent SFs for DeepTau2017v2p1VSjet",
     'inputs': [
-      {'name': "pt",       'type': "real",   'description': "tau pt"},
-      #{'name': "dm",       'type': "int",    'description': "tau decay mode (0, 1, 10, or 11)"},
-      {'name': "genmatch", 'type': "int",    'description': "genmatch (0 or 6: no match or jet, 1 or 3: electron, 2 or 4: muon, 5: real tau"},
-      {'name': "wp",       'type': "string", 'description': "DeepTauVSjet WP: VVVLoose-VVTight"},
-      {'name': "syst",     'type': "string", 'description': "systematic 'nom', 'up', 'down'"},
+      {'name': "pt",       'type': "real",   'description': "Reconstructed tau pt"},
+      {'name': "genmatch", 'type': "int",    'description': getgminfo()},
+      {'name': "wp",       'type': "string", 'description': getwpinfo(id,wps)},
+      {'name': "syst",     'type': "string", 'description': "Systematic 'nom', 'up', 'down'"},
     ],
     'output': {'name': "weight", 'type': "real"},
     'data': { # category:genmatch -> category:wp -> binning:eta -> category:syst
@@ -71,7 +86,6 @@ def test_tid_pt(corrs):
         { 'key': 2, 'value': 1.0 }, # mu -> tau_h fake
         { 'key': 3, 'value': 1.0 }, # e  -> tau_h fake
         { 'key': 4, 'value': 1.0 }, # mu -> tau_h fake
-        { 'key': 6, 'value': 1.0 }, # j  -> tau_h fake
         { 'key': 5,  # real tau_h
           'value': {
             'nodetype': 'category', # category:wp
@@ -88,51 +102,67 @@ def test_tid_pt(corrs):
                     { 'nodetype': 'category', # syst
                       'input': "syst",
                       'content': [
-                        { 'key': 'nom',  'value': maketid(sfs[wp],i,'nom')  },
-                        { 'key': 'up',   'value': maketid(sfs[wp],i,'up')   },
-                        { 'key': 'down', 'value': maketid(sfs[wp],i,'down') },
+                        { 'key': 'nom',  'value': maketid(sf,i,'nom')  },
+                        { 'key': 'up',   'value': maketid(sf,i,'up')   },
+                        { 'key': 'down', 'value': maketid(sf,i,'down') },
                       ]
-                    } for i in range(nptbins)
+                    } for i, sf in enumerate(sfs[wp]) # loop over pT bins
                   ] # bin:pt
                 } # binning:pt
               } for wp in wps
             ] # key:wp
           } # category:wp
-        }
+        },
+        { 'key': 6, 'value': 1.0 }, # j  -> tau_h fake
       ]
     } # category:genmatch
   })
-  print(corr)
-  print(corr.data.content)
-  print(f">>> Writing {fname}...")
-  JSONEncoder.write(corr,fname)
-  corrs.append(corr)
+  if verb>1:
+    print(JSONEncoder.dumps(corr))
+  elif verb>0:
+    print(corr)
+  if fname:
+    print(f">>> Writing {fname}...")
+    JSONEncoder.write(corr,fname)
+  return corr
   
 
-def test_tid_dm(corrs):
+def makecorr_tid_dm(sfs=None,**kwargs):
   """Tau ID SF, DM-dependent."""
   header("Tau DeepTauVSjet SF, DM-dependent")
-  fname   = "data/tau/tau_tid_dm.json"
-  dms     = [
-    0, 1, 10, 11
-  ]
-  wps     = [
-    #'VVVLoose', 'VVLoose', 'VLoose',
-    'Loose', 'Medium', 'Tight',
-    #'VTight', 'VVTight'
-  ]
-  ndms    = len(dms)
-  sfs     = {wp: {dm: (1.,0.2,0.2) for dm in dms} for wp in wps}
+  verb = kwargs.get('verb',0)
+  if sfs:
+    id    = kwargs.get('id',   "unkown")
+    era   = kwargs.get('era',  "unkown")
+    name  = kwargs.get('name', f"tau_sf_dm_{id}_{era}")
+    fname = kwargs.get('fname',f"data/tau/{name}.json")
+    info  = kwargs.get('info', f"DM-dependent SFs for {id} in {era}")
+    wps   = list(sfs.keys())
+    dms   = sorted(sfs[wps[0]].keys()) # get list of DMs from first WP
+  else: # test format with dummy values
+    id    = kwargs.get('id',  "DeepTau2017v2p1VSjet")
+    name  = kwargs.get('name', f"test_{id}_dm")
+    fname = kwargs.get('fname',f"data/tau/test_tau_dm.json")
+    info  = kwargs.get('info', f"DM-dependent SFs for {id}")
+    wps   = [
+      #'VVVLoose', 'VVLoose', 'VLoose',
+      'Loose', 'Medium', 'Tight',
+      #'VTight', 'VVTight'
+    ]
+    dms   = [0,1,2,10,11]
+    ndms  = len(dms)
+    sfs   = {wp: {dm: (1.,0.2,0.2) for dm in dms} for wp in wps}
+  wps.sort(key=wp_sortkey)
   corr    = Correction.parse_obj({
     'version': 0,
-    'name': "test_DeepTau2017v2p1VSjet_dm",
-    'description': "DM-dependent SFs for DeepTau2017v2p1VSjet",
+    'name': name,
+    'description': info,
     'inputs': [
       #{'name': "pt",       'type': "real",   'description': "tau pt"},
-      {'name': "dm",       'type': "int",    'description': "tau decay mode (0, 1, 10, or 11)"},
-      {'name': "genmatch", 'type': "int",    'description': "genmatch (0 or 6: no match, jet, 1 or 3: electron, 2 or 4: muon, 5: real tau"},
-      {'name': "wp",       'type': "string", 'description': "DeepTauVSjet WP: VVVLoose-VVTight"},
-      {'name': "syst",     'type': "string", 'description': "systematic 'nom', 'up', 'down'"},
+      {'name': "dm",       'type': "int",    'description': getdminfo(dms)},
+      {'name': "genmatch", 'type': "int",    'description': getgminfo()},
+      {'name': "wp",       'type': "string", 'description': getwpinfo(id,wps)},
+      {'name': "syst",     'type': "string", 'description': getsystinfo()},
     ],
     'output': {'name': "weight", 'type': "real"},
     'data': { # category:genmatch -> category:wp -> category:dm -> category:syst
@@ -178,11 +208,14 @@ def test_tid_dm(corrs):
       ]
     } # category:genmatch
   })
-  print(corr)
-  print(corr.data.content)
-  print(f">>> Writing {fname}...")
-  JSONEncoder.write(corr,fname)
-  corrs.append(corr)
+  if verb>1:
+    print(JSONEncoder.dumps(corr))
+  elif verb>0:
+    print(corr)
+  if fname:
+    print(f">>> Writing {fname}...")
+    JSONEncoder.write(corr,fname)
+  return corr
   
 
 def evaluate(corrs):
@@ -226,9 +259,9 @@ def evaluate(corrs):
   
 
 def main():
-  corrs = [ ] # list of corrections
-  test_tid_pt(corrs)
-  test_tid_dm(corrs)
+  corr1 = makecorr_tid_pt()
+  corr2 = makecorr_tid_dm()
+  corrs = [corr1,corr2]
   evaluate(corrs)
   #write(corrs)
   #read(corrs)

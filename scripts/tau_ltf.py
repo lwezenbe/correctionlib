@@ -11,29 +11,41 @@ import sys; sys.path.append('scripts')
 from utils import *
 
 
-def test_ltf(corrs,ltype='e'):
+def makecorr_ltf(sfs=None,**kwargs):
   """e -> tauh fake rate SF"""
+  verb   = kwargs.get('verb',0)
+  ltype  = kwargs.get('ltype','e')[0]
   header(f"{ltype} -> tauh fake rate SF")
+  allgms = [0,1,2,3,4,5,6] # all allowed genmatches
   if 'e' in ltype: # e -> tauh
-    fname = "data/tau/tau_etf.json"
     ebins = [0.0,1.460,1.558,2.3] # eta bins
-    gm    = 1 # genmatch
     gms   = [1,3]
   else: # mu -> tauh
     ltype = "mu"
-    fname = "data/tau/tau_mtf.json"
     ebins = [0.0,0.4,0.8,1.2,1.7,2.3] # eta bins
-    gm    = 2 # genmatch
     gms   = [2,4]
-  allgms = [1,2,3,4,5,6,0] # all allowed genmatches
-  nsfs   = len(ebins)-1
-  wps    = [
-    #'VVVLoose', 'VVLoose', 'VLoose',
-    'Loose', 'Medium', 'Tight',
-    #'VTight', 'VVTight'
-  ]
-  sfs   = {wp: [(1.0,1.1,0.9) for s in range(nsfs)] for wp in wps}
-  print(ebins,sfs)
+  if sfs:
+    id    = kwargs.get('id',   "unkown")
+    era   = kwargs.get('era',  "unkown")
+    name  = kwargs.get('name', f"tau_sf_dm_{id}_{era}")
+    fname = kwargs.get('fname',f"data/tau/{name}.json")
+    info  = kwargs.get('info', f"DM-dependent SFs for {id} in {era}")
+    ebins = kwargs.get('bins', ebins)
+    wps   = list(sfs.keys())
+  else: # test format with dummy values
+    id    = kwargs.get('id',  "DeepTau2017v2p1VSjet")
+    name  = kwargs.get('name', f"test_{id}_dm")
+    fname = kwargs.get('fname',f"data/tau/test_tau_{ltype}tf.json")
+    info  = kwargs.get('info', f"DM-dependent SFs for {id}")
+    ebins = kwargs.get('bins', ebins)
+    wps   = [
+      #'VVVLoose', 'VVLoose', 'VLoose',
+      'Loose', 'Medium', 'Tight',
+      #'VTight', 'VVTight'
+    ]
+    sfs   = {wp: [(1.0,1.1,0.9) for s in range(len(ebins)-1)] for wp in wps}
+  wps.sort(key=wp_sortkey)
+  print(f">>> etabins={ebins}")
   
   # LTF DATA
   ltfdata = {
@@ -77,10 +89,10 @@ def test_ltf(corrs,ltype='e'):
     'name': f"DeepTau2017v2p1VS{ltype}_test",
     'description': f"{ltype} -> tau_h fake rate SFs for DeepTau2017v2p1VS{ltype}",
     'inputs': [
-      {'name': "eta",      'type': "real",   'description': "tau eta"},
-      {'name': "genmatch", 'type': "int",    'description': "genmatch (0 or 6: no match or jet, 1 or 3: electron, 2 or 4: muon, 5: real tau"},
-      {'name': "wp",       'type': "string", 'description': f"DeepTauVSe WP: {wps[0]}-{wps[-1]}"},
-      {'name': "syst",     'type': "string", 'description': "systematic: 'nom', 'up', 'down'"},
+      {'name': "eta",      'type': "real",   'description': "Reconstructed tau eta"},
+      {'name': "genmatch", 'type': "int",    'description': getgminfo()},
+      {'name': "wp",       'type': "string", 'description': getwpinfo(id,wps)},
+      {'name': "syst",     'type': "string", 'description': getsystinfo()},
     ],
     'output': {'name': "weight", 'type': "real"},
     'data': { # category:genmatch -> category:wp -> transform:eta -> binning:eta -> category:syst
@@ -107,27 +119,30 @@ def test_ltf(corrs,ltype='e'):
     } # category:genmatch
     #} # transform:genmatch
   })
-  print(corr)
-  #print(corr.data.content)
-  print(f">>> Writing {fname}...")
-  JSONEncoder.write(corr,fname)
-  corrs.append(corr)
+  if verb>1:
+    print(JSONEncoder.dumps(corr))
+  elif verb>0:
+    print(corr)
+  if fname:
+    print(f">>> Writing {fname}...")
+    JSONEncoder.write(corr,fname)
+  return corr
   
 
 def evaluate(corrs):
   header("Evaluate")
   cset_py, cset = wrap(corrs) # wrap to create C++ object that can be evaluated
-  etabins = [-2.0,-1.0,0.0,1.1,2.0,2.5,3.0]
-  gms     = [0,1,2,3,4,5,6,7]
+  ebins = [-2.0,-1.0,0.0,1.1,2.0,2.5,3.0]
+  gms   = [0,1,2,3,4,5,6,7]
   for name in list(cset):
     corr = cset[name]
     print(f">>>\n>>> {name}: {corr.description}")
     wp   = 'Tight'
     print(f">>>\n>>> WP={wp}")
-    print(">>> %8s"%("genmatch")+" ".join("  %-15.1f"%(e) for e in etabins))
+    print(">>> %8s"%("genmatch")+" ".join("  %-15.1f"%(e) for e in ebins))
     for gm in gms:
       row = ">>> %8d"%(gm)
-      for eta in etabins:
+      for eta in ebins:
         sfnom = 0.0
         for syst in ['nom','up','down']:
           #print(">>>   gm=%d, eta=%4.1f, syst=%r sf=%s"%(gm,eta,syst,eval(corr,eta,gm,wp,syst)))
@@ -147,9 +162,9 @@ def evaluate(corrs):
   
 
 def main():
-  corrs = [ ] # list of corrections
-  test_ltf(corrs,'e')
-  test_ltf(corrs,'m')
+  corr1 = makecorr_ltf(ltype='e')
+  corr2 = makecorr_ltf(ltype='m')
+  corrs = [corr1,corr2] # list of corrections
   evaluate(corrs)
   #write(corrs)
   #read(corrs)
@@ -158,4 +173,4 @@ def main():
 if __name__ == '__main__':
   main()
   print()
-
+  

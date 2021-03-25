@@ -10,7 +10,7 @@
 import sys; sys.path.append('scripts')
 from utils import *
 from collections import namedtuple
-TES = namedtuple('TES',['nom','uncup_lowpt','uncup_highpt','uncdn_lowpt','uncdn_highpt'])
+TES = namedtuple('TES',['nom','uncup_lowpt','uncup_highpt','uncdn_lowpt','uncdn_highpt']) # help class
 
 
 def maketes(tes):
@@ -63,11 +63,11 @@ def maketes(tes):
 def test_tes(corrs):
   """TES"""
   header("Tau energy scale")
-  fname   = "data/tau/tau_tes.json"
+  fname   = "data/tau/test_tau_tes.json"
   ptbins  = [0.,34.,170.]
   etabins = [0.,1.5,2.5]
   dms     = [
-    0, 1, 10, 11
+    0, 1, 2, 10, 11
   ]
   fesdms  = [0,1] # for FES only DM0 and 1
   tes     = {dm: TES(1.0,0.1,0.2,0.1,0.2) for dm in dms} # nom uplow uphigh downlow downhigh
@@ -144,13 +144,13 @@ def test_tes(corrs):
   corr = Correction.parse_obj({
     'version': 0,
     'name': "test_tau_energy_scale",
-    'description': "tau energy scale center around 1, to be applied to pt, mass and energy of the reconstructed tau_h in simulated data",
+    'description': "Tau energy scale center around 1, to be applied to pt, mass and energy of the reconstructed tau_h in simulated data",
     'inputs': [
-      {'name': "pt",       'type': "real",   'description': "tau pt"},
-      {'name': "eta",      'type': "real",   'description': "tau eta"},
-      {'name': "dm",       'type': "int",    'description': "tau decay mode (0, 1, 10, or 11)"},
-      {'name': "genmatch", 'type': "int",    'description': "genmatch (0 or 6: no match or jet, 1 or 3: electron, 2 or 4: muon, 5: real tau"},
-      {'name': "syst",     'type': "string", 'description': "systematic 'nom', 'up', 'down'"},
+      {'name': "pt",       'type': "real",   'description': "Reconstructed tau pt"},
+      {'name': "eta",      'type': "real",   'description': "Reconstructed tau eta"},
+      {'name': "dm",       'type': "int",    'description': getdminfo(dms)},
+      {'name': "genmatch", 'type': "int",    'description': getgminfo()},
+      {'name': "syst",     'type': "string", 'description': getsystinfo()},
     ],
     'output': {'name': "weight", 'type': "real"},
     'data': { # category:genmatch -> key:genmatch

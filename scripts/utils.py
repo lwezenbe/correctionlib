@@ -16,6 +16,45 @@ import json, jsonschema
 import JSONEncoder
 
 
+def getsystinfo():
+  """Help function to create description of systematic inputs."""
+  return "Systematic variation: 'nom', 'up', 'down'"
+  
+def getgminfo():
+  """Help function to create description of genmatch inputs."""
+  return "genmatch: 0 or 6 = unmatched or jet, 1 or 3 = electron, 2 or 4 = muon, 5 = real tau"
+  
+def getdminfo(dms):
+  """Help function to create description of DM inputs."""
+  dminfo = ', '.join(str(d) for d in dms)
+  return f"Reconstructed tau decay mode: {dminfo}"
+  
+def getwpinfo(id,wps):
+  """Help function to create description of WP inputs."""
+  try:
+    wpmin = max([w for w in wps if 'loose' in w.lower()],key=lambda x: len(x)) # get loose WP with most 'V's
+    wpmax = max([w for w in wps if 'tight' in w.lower()],key=lambda x: len(x)) # get tight WP with most 'V's
+    info  = f"{id} working point: {wpmin}-{wpmax}"
+  except:
+    info  = f"{id} working point: {', '.join(wps)}"
+  return info
+  
+
+def wp_sortkey(string):
+  """Help function to sort WPs. Use as
+      wps = ['Medium','Tight','Loose','VTight','VLoose','VVTight']
+      sorted(wps,key=wp_sortkey)
+  """
+  lowstr = string.lower()
+  if lowstr.startswith('medium'):
+    return 0
+  elif lowstr.lstrip('v').startswith('loose'):
+    return -1*(lowstr.count('v')+1)
+  elif lowstr.startswith('tight'):
+    return 1*(lowstr.count('v')+1)
+  return 100+len(string) # anything else at the end
+  
+
 def header(string):
   print("\n>>> \033[1m\033[4m%s\033[0m"%(string))
   
