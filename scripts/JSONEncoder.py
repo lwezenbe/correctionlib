@@ -40,7 +40,7 @@ class JSONEncoder(json.JSONEncoder):
       kwargs['indent'] = 2
     self.maxlistlen    = kwargs.pop('maxlistlen',25) # maximum of primitive elements per list, before breaking lines
     self.maxdictlen    = kwargs.pop('maxdictlen', 2) # maximum of primitive elements per dict, before breaking lines
-    self.maxstrlen     = kwargs.pop('maxstrlen',2*self.maxlistlen) # maximum length of strings, before breaking lines
+    self.maxstrlen     = kwargs.pop('maxstrlen',2*self.maxlistlen) # maximum length of strings in short dict, before breaking lines
     self.breakbrackets = kwargs.pop('breakbrackets',False) # break after opening bracket
     super(JSONEncoder,self).__init__(*args,**kwargs)
     self._indent = 0 # current indent
