@@ -11,9 +11,9 @@ import sys; sys.path.append('src')
 assert sys.version_info>=(3,8),"Python version must be newer than 3.8, currently %s.%s"%(sys.version_info[:2])
 import correctionlib._core as core
 import correctionlib.schemav2 as schema
+import correctionlib.JSONEncoder as JSONEncoder
 from correctionlib.schemav2 import Correction, CorrectionSet
 import json, jsonschema
-import JSONEncoder
 
 
 def getsystinfo():
