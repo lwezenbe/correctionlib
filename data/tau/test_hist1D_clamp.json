@@ -1,4 +1,5 @@
-{ "name": "test_hist1D_clamp",
+{
+  "name": "test_hist1D_clamp",
   "description": "Simple 1D SF with clamp",
   "version": 0,
   "inputs": [

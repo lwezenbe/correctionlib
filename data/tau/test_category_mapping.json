@@ -1,4 +1,5 @@
-{ "name": "test_category_mapping",
+{
+  "name": "test_category_mapping",
   "description": "Simple category with mapping 11 -> 10",
   "version": 0,
   "inputs": [

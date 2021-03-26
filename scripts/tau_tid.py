@@ -138,7 +138,7 @@ def makecorr_tid_dm(sfs=None,**kwargs):
     fname = kwargs.get('fname',f"data/tau/{name}.json")
     info  = kwargs.get('info', f"DM-dependent SFs for {id} in {era}")
     wps   = list(sfs.keys())
-    dms   = sorted(sfs[wps[0]].keys()) # get list of DMs from first WP
+    dms   = sfs[wps[0]].keys() # get list of DMs from first WP
   else: # test format with dummy values
     id    = kwargs.get('id',  "DeepTau2017v2p1VSjet")
     name  = kwargs.get('name', f"test_{id}_dm")
@@ -153,6 +153,7 @@ def makecorr_tid_dm(sfs=None,**kwargs):
     ndms  = len(dms)
     sfs   = {wp: {dm: (1.,0.2,0.2) for dm in dms} for wp in wps}
   wps.sort(key=wp_sortkey)
+  dms.sort()
   corr    = Correction.parse_obj({
     'version': 0,
     'name': name,

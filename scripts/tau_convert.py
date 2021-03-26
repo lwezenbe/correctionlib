@@ -11,6 +11,7 @@ import sys; sys.path.append('scripts')
 from utils import *
 from tau_tid import makecorr_tid_dm, makecorr_tid_pt
 from tau_ltf import makecorr_ltf
+from tau_tes import makecorr_tes
 import re
 from ROOT import gROOT, TFile
 rexp_fjet = re.compile(r"(?:.+/)?TauID_SF_([^_]+)_([^_]+)_(20[0123][^_]+)(\w*).root$")
@@ -90,7 +91,6 @@ def main(args):
           if not gROOT.GetClass(key.GetClassName()).InheritsFrom('TH1'): continue
           wp      = key.GetName()
           hist    = file.Get(wp)
-          dms     = [ ]
           sfs[wp] = { }
           for dm in [0,1,2,5,6,10,11]:
             bin  = hist.GetXaxis().FindBin(dm)
@@ -101,7 +101,7 @@ def main(args):
             sfdn = round(sf-err,prec)
             sf   = round(sf,prec)
             sfs[wp][dm] = (sf,sfup,sfdn)
-          if 1 in sfs[wp] and 2 not in sfs[wp]:
+          if 1 in sfs[wp] and 2 not in sfs[wp]: # reuse DM1 for DM2
             sfs[wp][2] = sfs[wp][1]
         file.Close()
         if verbosity>0:
@@ -203,17 +203,53 @@ def main(args):
   for era in infiles['tes']:
     for id in infiles['tes'][era]:
       assert all(k in infiles['tes'][era][id] for k in ['low','high','ele']), f"Not all files are present: {infiles['tes'][era][id]}"
-      fname_low  = infiles['tes'][era][id]['low']
-      fname_high = infiles['tes'][era][id]['high']
-      fname_ele  = infiles['tes'][era][id]['ele']
-      print(f">>> {era}: {id} energy scales from\n"
-            f">>>   {fname_low}\n"
-            f">>>   {fname_high}\n"
-            f">>>   {fname_ele}\n")
-      tes_low = { } # DM-dependent
-      tes_high = { } # DM-dependent
-      tes_low = [ ] # eta-dependent
-
+      fnames = infiles['tes'][era][id]
+      print(f">>> {era}: {id} energy scales from\n>>>   "+"\n>>>   ".join(fnames.values()))
+      tesvals = {
+        'low':  { }, # DM-dependent, low pT, real tau_h
+        'high': { }, # DM-dependent, high pT, real tau_h
+        'ele':  { }, # DM-/eta-dependent, e -> tau_h
+      }
+      ptbins  = [0.,34.,170.]
+      etabins = [0.,1.5,2.5]
+      for key, fname in fnames.items():
+        file = TFile.Open(fname)
+        if key=='ele':
+          # See
+          #  https://github.com/cms-tau-pog/TauIDSFs/blob/127e021f1616f1480837a62742b775cd42bcc9ac/utils/createSFFiles.py#L111-L117
+          #  https://github.com/cms-tau-pog/TauIDSFs/blob/127e021f1616f1480837a62742b775cd42bcc9ac/python/TauIDSFTool.py#L216-L222
+          file.ls()
+          graph = file.Get('fes')
+          i = 0
+          print(list(graph.GetY()))
+          for region in ['barrel','endcap']: # eta in [0.,1.5,2.5]
+            for dm in [0,1]:
+              fes   = graph.GetPointY(i)
+              fesup = round(fes+graph.GetErrorYhigh(i),prec)
+              fesdn = round(fes-graph.GetErrorYlow(i),prec)
+              fes   = round(graph.GetPointY(i),prec)
+              tesvals[key].setdefault(dm,[ ]).append((fes,fes+fesup,fes-fesdn))
+              i += 1
+          tesvals[key][2] = tesvals[key][1][:] # reuse DM1 for DM2
+        else:
+          hist = file.Get('tes')
+          for dm in [0,1,2,5,6,10,11]:
+            bin  = hist.GetXaxis().FindBin(dm)
+            tes   = hist.GetBinContent(bin)
+            err   = hist.GetBinError(bin)
+            if tes<=0 or (tes==1.0 and err==0.0): continue
+            tesup = round(tes+err,prec)
+            tesdn = round(tes-err,prec)
+            tes   = round(tes,prec)
+            tesvals[key][dm] = (tes,tesup,tesdn)
+          if 1 in tesvals[key] and 2 not in tesvals[key]: # reuse DM1 for DM2
+            tesvals[key][2] = tesvals[key][1]
+        file.Close()
+      if verbosity>0:
+        #print(f">>> etabins={ebins}")
+        print(JSONEncoder.dumps(tesvals))
+      corr = makecorr_tes(tesvals,id=id,era=era,ptbins=ptbins,etabins=etabins,verb=verbosity)
+  
 
 if __name__ == '__main__':
   from argparse import ArgumentParser

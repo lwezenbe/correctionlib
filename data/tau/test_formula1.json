@@ -1,4 +1,5 @@
-{ "name": "test_formula1",
+{
+  "name": "test_formula1",
   "description": "Simple formula, 'x*x'",
   "version": 0,
   "inputs": [

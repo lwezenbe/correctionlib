@@ -1,4 +1,5 @@
-{ "name": "test_hist2D",
+{
+  "name": "test_hist2D",
   "description": "Simple 2D SF",
   "version": 0,
   "inputs": [

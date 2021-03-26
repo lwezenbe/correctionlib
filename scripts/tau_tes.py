@@ -10,7 +10,7 @@
 import sys; sys.path.append('scripts')
 from utils import *
 from collections import namedtuple
-TES = namedtuple('TES',['nom','uncup_lowpt','uncup_highpt','uncdn_lowpt','uncdn_highpt']) # help class
+TES = namedtuple('TES',['nom','up_lowpt','dn_lowpt','up_highpt','dn_highpt']) # helper class
 
 
 def maketes(tes):
@@ -18,10 +18,10 @@ def maketes(tes):
   # f = TFormula('f',sf)
   # for x in [10,34,35,(170+34)/2,100,169.9,170,171,200,2000]: x, f.Eval(x)
   #return f"x<34?{low}: x<170?{low}+({high}-{low})/(170.-34.)*(x-34): {high}"
-  gradup = (tes.uncup_highpt-tes.uncup_lowpt)/(170.-34.)
-  graddn = (tes.uncdn_highpt-tes.uncdn_lowpt)/(170.-34.)
-  offsup = tes.nom+tes.uncup_lowpt-34.*gradup
-  offsdn = tes.nom-tes.uncdn_lowpt+34.*graddn
+  gradup = (tes.up_highpt-tes.up_lowpt)/(170.-34.)
+  graddn = (tes.dn_highpt-tes.dn_lowpt)/(170.-34.)
+  offsup = tes.nom+tes.up_lowpt-34.*gradup
+  offsdn = tes.nom-tes.dn_lowpt+34.*graddn
   data   = [ # key:syst
     { 'key': 'nom',  'value': tes.nom }, # central value
     { 'key': 'up', 'value': { # down
@@ -30,13 +30,13 @@ def maketes(tes):
         'edges': [0.,34.,170.,1000.],
         'flow': "clamp",
         'content': [
-          tes.nom+tes.uncup_lowpt,
+          tes.nom+tes.up_lowpt,
           { 'nodetype': 'formula', # down (pt-dependent)
             'expression': "%.6g+%.6g*x"%(offsup,gradup),
             'parser': "TFormula",
             'variables': ["pt"],
           },
-          tes.nom+tes.uncup_highpt,
+          tes.nom+tes.up_highpt,
         ],
       },
     },
@@ -46,13 +46,13 @@ def maketes(tes):
         'edges': [0.,34.,170.,1000.],
         'flow': "clamp",
         'content': [
-          tes.nom-tes.uncdn_highpt,
+          tes.nom-tes.dn_highpt,
           { 'nodetype': 'formula', # down (pt-dependent)
             'expression': "%.6g-%.6g*x"%(offsdn,graddn),
             'parser': "TFormula",
             'variables': ["pt"],
           },
-          tes.nom-tes.uncdn_highpt,
+          tes.nom-tes.dn_highpt,
         ],
       },
     },
@@ -60,18 +60,38 @@ def maketes(tes):
   return data
   
 
-def test_tes(corrs):
+def makecorr_tes(tesvals=None,**kwargs):
   """TES"""
   header("Tau energy scale")
-  fname   = "data/tau/test_tau_tes.json"
+  verb = kwargs.get('verb',0)
+  info = ", to be applied to reconstructed tau_h pt, mass and energy in simulated data"
   ptbins  = [0.,34.,170.]
   etabins = [0.,1.5,2.5]
-  dms     = [
-    0, 1, 2, 10, 11
-  ]
-  fesdms  = [0,1] # for FES only DM0 and 1
-  tes     = {dm: TES(1.0,0.1,0.2,0.1,0.2) for dm in dms} # nom uplow uphigh downlow downhigh
-  fes     = {dm: [(1.0,1.2,0.8)]*(len(etabins)-1) for dm in fesdms} # nom uplow uphigh downlow downhigh
+  if tesvals:
+    id      = kwargs.get('id',   "unkown")
+    era     = kwargs.get('era',  "unkown")
+    name    = kwargs.get('name', f"tau_sf_dm_{id}_{era}")
+    fname   = kwargs.get('fname',f"data/tau/{name}.json")
+    info    = kwargs.get('info', f"DM-dependent tau energy scale for {id} in {era}"+info)
+    ptbins  = kwargs.get('ptbins',ptbins)
+    etabins = kwargs.get('etabins',etabins)
+    dms     = list(tesvals['low'].keys())
+    fesdms  = list(tesvals['ele'].keys())
+    fesvals = tesvals['ele'] # dm -> (nom,up,down)
+    tesvals = { # dm -> TES(nom,uplow,downlow,uphigh,downhigh)
+      dm: TES(*tesvals['low'][dm],*tesvals['high'][dm][1:]) for dm in dms
+    }
+  else: # test format with dummy values
+    id      = kwargs.get('id',  "DeepTau2017v2p1VSjet")
+    name    = kwargs.get('name', f"test_{id}_dm")
+    fname   = kwargs.get('fname',f"data/tau/test_tau_tes.json")
+    info    = kwargs.get('info', f"DM-dependent tau energy scale for {id}"+info)
+    dms     = [0,1,2,10,11]
+    fesdms  = [0,1,2] # for FES only DM0 and 1
+    tesvals = {dm: TES(1.0,0.1,0.1,0.2,0.2) for dm in dms} # (nom,uplow,downlow,uphigh,downhigh)
+    fesvals = {dm: [(1.0,1.2,0.8)]*(len(etabins)-1) for dm in fesdms} # (nom,up,down)
+  dms.sort()
+  fesdms.sort()
   
   # REAL TAU (genmatch==5)
   tesdata = { # category:dm -> category:syst
@@ -83,7 +103,7 @@ def test_tes(corrs):
         'value': {
           'nodetype': 'category', # category:syst
           'input': "syst",
-          'content': maketes(tes[dm])
+          'content': maketes(tesvals[dm])
         } # category:syst
       } for dm in dms
     ] # key:dm
@@ -114,18 +134,18 @@ def test_tes(corrs):
               { 'nodetype': 'category', # category:syst
                 'input': "syst",
                 'content': [
-                  { 'key': 'nom',  'value': f[0] },
-                  { 'key': 'up',   'value': f[1] },
-                  { 'key': 'down', 'value': f[2] },
+                  { 'key': 'nom',  'value': fes[0] },
+                  { 'key': 'up',   'value': fes[1] },
+                  { 'key': 'down', 'value': fes[2] },
                 ]
-              } for f in fes[dm] # category:syst
+              } for fes in fesvals[dm] # category:syst
             ]
           } # binning:eta
         } # transform:eta
       } for dm in fesdms
     ]+[
-      { 'key': 10, 'value': 1.0 },
-      { 'key': 11, 'value': 1.0 },
+      { 'key': dm, 'value': 1.0 } # default for supported DMs
+      for dm in dms if dm not in fesdms
     ] # key:dm
   } # category:dm
   
@@ -144,7 +164,7 @@ def test_tes(corrs):
   corr = Correction.parse_obj({
     'version': 0,
     'name': "test_tau_energy_scale",
-    'description': "Tau energy scale center around 1, to be applied to pt, mass and energy of the reconstructed tau_h in simulated data",
+    'description': info,
     'inputs': [
       {'name': "pt",       'type': "real",   'description': "Reconstructed tau pt"},
       {'name': "eta",      'type': "real",   'description': "Reconstructed tau eta"},
@@ -169,12 +189,14 @@ def test_tes(corrs):
     } # category:genmatch
   })
   
-  # WRITE
-  print(corr)
-  #print(corr.data.content)
-  print(f">>> Writing {fname}...")
-  JSONEncoder.write(corr,fname)
-  corrs.append(corr)
+  if verb>1:
+    print(JSONEncoder.dumps(corr))
+  elif verb>0:
+    print(corr)
+  if fname:
+    print(f">>> Writing {fname}...")
+    JSONEncoder.write(corr,fname)
+  return corr
   
 
 def evaluate(corrs):
@@ -217,8 +239,8 @@ def evaluate(corrs):
   
 
 def main():
-  corrs = [ ] # list of corrections
-  test_tes(corrs)
+  corr1 = makecorr_tes(corrs)
+  corrs = [corr1] # list of corrections
   evaluate(corrs)
   #write(corrs)
   #read(corrs)

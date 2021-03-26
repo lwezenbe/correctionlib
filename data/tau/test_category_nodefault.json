@@ -1,4 +1,5 @@
-{ "name": "test_category_nodefault",
+{
+  "name": "test_category_nodefault",
   "description": "Simple category with no default",
   "version": 0,
   "inputs": [
