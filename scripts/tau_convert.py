@@ -21,11 +21,20 @@ rexp_num  = re.compile(r"[-+]?\d+\.?\d*")
 rexp_tid  = re.compile(r"\(([^)&]+)(?:&&)?([^)&]*)\)\*([-+]*[\d.]+|\([^)]+\))") # "(x<=25)*1.0+(x>20&&x<=25)*1.0+..."
 
 
+def reusesf(sfs,dm1,dm2):
+  if dm1 in sfs and dm2 not in sfs: # reuse dm1 for dm2
+    print(warn(f"Reusing DM{dm1} SF {sfs[dm1]} for DM{dm2} SF..."))
+    sfs[dm2] = sfs[dm1]
+  return sfs[dm1]
+  
+
+
 def main(args):
   fnames    = args.fnames
   verbosity = args.verbosity
   prec      = 7 # precision of SFs
   lprec     = 5 # precision of l -> tau_h SFs
+  outdir    = ensuredir("data/tau/new")
   infiles   = {
     'jet': { }, # DM/pT-dependent DeepTauVSjet, MVAoldDM: era -> id -> jet/dm -> fname
     'mu':  { }, # eta-dependent DeepTauVSmu:              era -> id -> fname
@@ -34,12 +43,14 @@ def main(args):
   }
   
   # CATEGORIZED
+  if verbosity>0:
+    print(">>> categorize files...")
   for fname in fnames:
     if not fname.lower().endswith(".root"):
-      print(f">>> {fname}: Not a ROOT file! Ignoring...")
+      print(warn(f"{fname}: Not a ROOT file! Ignoring..."))
       continue
     if fname.endswith("_EMB.root"):
-      print(f">>> {fname}: Ignoring embedded SFs for now...")
+      print(warn(f"{fname}: Ignoring embedded SFs for now..."))
       continue
     match = rexp_fjet.match(fname)
     if match:
@@ -70,7 +81,7 @@ def main(args):
       elif param=='eta-dm': # eta/DM-dependent tau energy scale for e -> tau_h fake
         infiles['tes'].setdefault(era,{ }).setdefault(id,{ })['ele'] = fname
         continue
-    print(f">>> {fname}: Did not recognize file! Ignoring...")
+    print(warn(f"{fname}: Did not recognize file! Ignoring..."))
   for era in infiles['tes']: # reuse e -> tau_h ES from DeepTau
     for id in infiles['tes'][era]:
       if "DeepTau" not in id and 'ele' not in infiles['tes'][era][id] and\
@@ -83,7 +94,8 @@ def main(args):
   for era in infiles['jet']:
     for id in infiles['jet'][era]:
       if 'dm' in infiles['jet'][era][id]: # DM-dependent
-        print(f">>> {era}: DM-dependent {id} SFs from {fname}")
+        header(f"DM-dependent {id} SFs in {era}")
+        print(f">>>   {fname}")
         fname = infiles['jet'][era][id]['dm']
         file = TFile.Open(fname)
         sfs = { } # wp -> dm -> (sf,up,down)
@@ -101,15 +113,17 @@ def main(args):
             sfdn = round(sf-err,prec)
             sf   = round(sf,prec)
             sfs[wp][dm] = (sf,sfup,sfdn)
-          if 1 in sfs[wp] and 2 not in sfs[wp]: # reuse DM1 for DM2
-            sfs[wp][2] = sfs[wp][1]
+          reusesf(sfs[wp], 1, 2) # reuse DM1 for DM2
+          reusesf(sfs[wp],10,11) # reuse DM10 for DM11
         file.Close()
         if verbosity>0:
           print(JSONEncoder.dumps(sfs))
-        corr = makecorr_tid_dm(sfs,id=id,era=era,verb=verbosity)
+        corr = makecorr_tid_dm(sfs,id=id,era=era,
+                               outdir=outdir,verb=verbosity)
       elif 'pt' in infiles['jet'][era][id]: # pT-dependent
         fname = infiles['jet'][era][id]['pt']
-        print(f">>> {era}: pT-dependent {id} SFs from {fname}")
+        header(f"pT-dependent {id} SFs in {era}")
+        print(f">>>   {fname}")
         file = TFile.Open(fname)
         sfs = { }
         for key in file.GetListOfKeys():
@@ -117,7 +131,7 @@ def main(args):
           if not key.GetName().endswith('_cent'): continue
           wp      = key.GetName().replace("_cent","")
           if not any(w==wp.lstrip('V') for w in ['Loose','Medium','Tight']): continue
-          if not wp=='Medium': continue
+          ###if not wp=='Medium': continue
           wpnom   = key.GetName()
           wpup    = key.GetName().replace("cent","up")
           wpdown  = key.GetName().replace("cent","down")
@@ -162,16 +176,17 @@ def main(args):
         if verbosity>0:
           print(f">>> ptbins={ptbins}")
           print(JSONEncoder.dumps(sfs))
-        corr = makecorr_tid_pt(sfs,id=id,era=era,verb=verbosity)
+        corr = makecorr_tid_pt(sfs,id=id,era=era,
+                               outdir=outdir,verb=verbosity)
         file.Close()
   
   # TAU ANTI-ELECTRON SFs
   for ltype in ['e','mu']:
-    from tau_tid import makecorr_tid_pt
     for era in infiles[ltype]:
       for id in infiles[ltype][era]:
         fname = infiles[ltype][era][id]
-        print(f">>> {era}: eta-dependent {id} SFs from {fname}")
+        header(f"{ltype} -> tauh fake rate SF for {id} in {era} from")
+        print(f">>>   {fname}")
         file = TFile.Open(fname)
         sfs = { } # wp -> (sf,up,down)
         for key in file.GetListOfKeys():
@@ -196,16 +211,18 @@ def main(args):
         if verbosity>0:
           print(f">>> etabins={ebins}")
           print(JSONEncoder.dumps(sfs))
-        corr = makecorr_ltf(sfs,id=id,era=era,ltype=ltype,bins=ebins,verb=verbosity)
-        exit(0)
+        corr = makecorr_ltf(sfs,id=id,era=era,ltype=ltype,bins=ebins,
+                            outdir=outdir,verb=verbosity)
   
   # TAU ENERGY SCALES
   for era in infiles['tes']:
     for id in infiles['tes'][era]:
+      header(f"Tau energy scale for {id} in {era} from")
       assert all(k in infiles['tes'][era][id] for k in ['low','high','ele']), f"Not all files are present: {infiles['tes'][era][id]}"
       fnames = infiles['tes'][era][id]
-      print(f">>> {era}: {id} energy scales from\n>>>   "+"\n>>>   ".join(fnames.values()))
+      print(f">>>   "+"\n>>>   ".join(fnames.values()))
       tesvals = {
+      
         'low':  { }, # DM-dependent, low pT, real tau_h
         'high': { }, # DM-dependent, high pT, real tau_h
         'ele':  { }, # DM-/eta-dependent, e -> tau_h
@@ -218,10 +235,8 @@ def main(args):
           # See
           #  https://github.com/cms-tau-pog/TauIDSFs/blob/127e021f1616f1480837a62742b775cd42bcc9ac/utils/createSFFiles.py#L111-L117
           #  https://github.com/cms-tau-pog/TauIDSFs/blob/127e021f1616f1480837a62742b775cd42bcc9ac/python/TauIDSFTool.py#L216-L222
-          file.ls()
-          graph = file.Get('fes')
+          graph = file.Get('fes') # barrel_dm0, barrel_dm1, endcap_dm0, endcap_dm1
           i = 0
-          print(list(graph.GetY()))
           for region in ['barrel','endcap']: # eta in [0.,1.5,2.5]
             for dm in [0,1]:
               fes   = graph.GetPointY(i)
@@ -242,13 +257,14 @@ def main(args):
             tesdn = round(tes-err,prec)
             tes   = round(tes,prec)
             tesvals[key][dm] = (tes,tesup,tesdn)
-          if 1 in tesvals[key] and 2 not in tesvals[key]: # reuse DM1 for DM2
-            tesvals[key][2] = tesvals[key][1]
+          reusesf(tesvals[key], 1, 2) # reuse DM1 for DM2
+          reusesf(tesvals[key],10,11) # reuse DM10 for DM11
         file.Close()
       if verbosity>0:
         #print(f">>> etabins={ebins}")
         print(JSONEncoder.dumps(tesvals))
-      corr = makecorr_tes(tesvals,id=id,era=era,ptbins=ptbins,etabins=etabins,verb=verbosity)
+      corr = makecorr_tes(tesvals,id=id,era=era,ptbins=ptbins,etabins=etabins,
+                          outdir=outdir,verb=verbosity)
   
 
 if __name__ == '__main__':

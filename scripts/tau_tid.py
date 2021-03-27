@@ -37,22 +37,23 @@ def maketid(sfs,ibin,syst='nom'):
   return sf
   
 
-def makecorr_tid_pt(sfs=None,fname="data/tau/test_tau_tid_pt.json",**kwargs):
+def makecorr_tid_pt(sfs=None,**kwargs):
   """Tau ID SF, pT-dependent."""
-  header("Tau DeepTauVSjet SF, pT-dependent")
   verb    = kwargs.get('verb',0)
+  outdir  = kwargs.get('outdir',"data/tau")
   ptbins  = kwargs.get('bins',[20.,25.,30.,35.,40.,500.,1000.,2000.])
   if sfs:
     id    = kwargs.get('id',   "unkown")
     era   = kwargs.get('era',  "unkown")
     name  = kwargs.get('name', f"tau_sf_pt_{id}_{era}")
-    fname = kwargs.get('fname',f"data/tau/{name}.json")
+    fname = kwargs.get('fname',f"{outdir}/{name}.json")
     info  = kwargs.get('info', f"pT-dependent SFs for {id} in {era}")
     wps   = list(sfs.keys())
   else: # test format with dummy values
     id    = kwargs.get('id',  "DeepTau2017v2p1VSjet")
+    header(f"Dummy pT-dependent {id} SFs for test")
     name  = kwargs.get('name', f"test_{id}_pt")
-    fname = kwargs.get('fname',f"data/tau/test_tau_pt.json")
+    fname = kwargs.get('fname',f"{outdir}/test_tau_pt.json")
     info  = kwargs.get('info', f"pT-dependent SFs for {id}")
     wps   = [
       #'VVVLoose', 'VVLoose', 'VLoose',
@@ -129,7 +130,6 @@ def makecorr_tid_pt(sfs=None,fname="data/tau/test_tau_tid_pt.json",**kwargs):
 
 def makecorr_tid_dm(sfs=None,**kwargs):
   """Tau ID SF, DM-dependent."""
-  header("Tau DeepTauVSjet SF, DM-dependent")
   verb = kwargs.get('verb',0)
   if sfs:
     id    = kwargs.get('id',   "unkown")
@@ -138,9 +138,10 @@ def makecorr_tid_dm(sfs=None,**kwargs):
     fname = kwargs.get('fname',f"data/tau/{name}.json")
     info  = kwargs.get('info', f"DM-dependent SFs for {id} in {era}")
     wps   = list(sfs.keys())
-    dms   = sfs[wps[0]].keys() # get list of DMs from first WP
+    dms   = list(sfs[wps[0]].keys()) # get list of DMs from first WP
   else: # test format with dummy values
     id    = kwargs.get('id',  "DeepTau2017v2p1VSjet")
+    header(f"Dummy DM-dependent {id} SFs for test")
     name  = kwargs.get('name', f"test_{id}_dm")
     fname = kwargs.get('fname',f"data/tau/test_tau_dm.json")
     info  = kwargs.get('info', f"DM-dependent SFs for {id}")

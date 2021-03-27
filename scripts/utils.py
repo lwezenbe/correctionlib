@@ -7,7 +7,7 @@
 #   https://github.com/cms-tau-pog/TauIDSFs/blob/master/utils/createSFFiles.py
 #   https://github.com/cms-nanoAOD/correctionlib/blob/master/tests/test_core.py
 #   https://stackoverflow.com/questions/13249415/how-to-implement-custom-indentation-when-pretty-printing-with-the-json-module
-import sys; sys.path.append('src')
+import os, sys; sys.path.append('src')
 assert sys.version_info>=(3,8),"Python version must be newer than 3.8, currently %s.%s"%(sys.version_info[:2])
 import correctionlib._core as core
 import correctionlib.schemav2 as schema
@@ -58,6 +58,9 @@ def wp_sortkey(string):
 def header(string):
   print("\n>>> \033[1m\033[4m%s\033[0m"%(string))
   
+def warn(string):
+  return ">>> "+f"\033[33m{string}\033[0m"
+  
 
 def eval(corr,*args):
   try:
@@ -76,3 +79,16 @@ def wrap(corrs):
   cset_cpp = core.CorrectionSet.from_string(cset_py.json()) # wrap to create C++ object that can be evaluated
   return cset_py, cset_cpp
   
+
+def ensuredir(dirname,**kwargs):
+  """Make directory if it does not exist."""
+  verbosity = kwargs.get('verb',  0    )
+  if not os.path.exists(dirname):
+    os.makedirs(dirname)
+    if verbosity>=1:
+      print(f'>>> Made directory "{dirname}"')
+    if not os.path.exists(dirname):
+      print(f'>>> Failed to make directory "{dirname}"')
+  return dirname
+
+

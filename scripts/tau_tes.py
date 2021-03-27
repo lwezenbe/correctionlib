@@ -62,16 +62,16 @@ def maketes(tes):
 
 def makecorr_tes(tesvals=None,**kwargs):
   """TES"""
-  header("Tau energy scale")
-  verb = kwargs.get('verb',0)
-  info = ", to be applied to reconstructed tau_h pt, mass and energy in simulated data"
+  verb    = kwargs.get('verb',0)
+  outdir  = kwargs.get('outdir',"data/tau")
+  info    = ", to be applied to reconstructed tau_h pt, mass and energy in simulated data"
   ptbins  = [0.,34.,170.]
   etabins = [0.,1.5,2.5]
   if tesvals:
     id      = kwargs.get('id',   "unkown")
     era     = kwargs.get('era',  "unkown")
     name    = kwargs.get('name', f"tau_sf_dm_{id}_{era}")
-    fname   = kwargs.get('fname',f"data/tau/{name}.json")
+    fname   = kwargs.get('fname',f"{outdir}/{name}.json")
     info    = kwargs.get('info', f"DM-dependent tau energy scale for {id} in {era}"+info)
     ptbins  = kwargs.get('ptbins',ptbins)
     etabins = kwargs.get('etabins',etabins)
@@ -83,8 +83,9 @@ def makecorr_tes(tesvals=None,**kwargs):
     }
   else: # test format with dummy values
     id      = kwargs.get('id',  "DeepTau2017v2p1VSjet")
+    header(f"Tau energy scale for {id}")
     name    = kwargs.get('name', f"test_{id}_dm")
-    fname   = kwargs.get('fname',f"data/tau/test_tau_tes.json")
+    fname   = kwargs.get('fname',f"{outdir}/test_tau_tes.json")
     info    = kwargs.get('info', f"DM-dependent tau energy scale for {id}"+info)
     dms     = [0,1,2,10,11]
     fesdms  = [0,1,2] # for FES only DM0 and 1

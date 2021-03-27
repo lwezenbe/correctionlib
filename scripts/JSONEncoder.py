@@ -78,12 +78,13 @@ class JSONEncoder(json.JSONEncoder):
           retval = "[ "+", ".join(output)+" ]"
         else: # break long list into multiple lines
           nlines = math.ceil(len(obj)/float(self.maxlistlen))
-          maxlen = int(len(obj)/nlines)
-          for i in range(0,nlines):
+          maxlen = int(math.ceil(len(obj)/nlines))
+          for i in range(0,nlines+1):
             line = [ ]
             for item in obj[i*maxlen:(i+1)*maxlen]:
               line.append(json.dumps(item))
-            output.append(", ".join(line))
+            if line:
+              output.append(", ".join(line))
         if not retval:
           if grandparent==dict or self.breakbrackets: # break first line after opening bracket
             retval = "[\n"+indent_str+(",\n"+indent_str).join(output)+"\n"+' '*self._indent+"]"
@@ -127,16 +128,24 @@ if __name__ == '__main__':
   data = { # quick test of JSONEncoder behavior
     'layer1': {
       'layer2_1': {
-        'layer3_1': [{"x":1,"y":7}, {"x":0,"y":4}, {"x":5,"y":3},
-                     {"x":6,"y":9}, {'key': 'foo', 'value': 1},
-                     {'key': 'foo', 'value': {k: v for v, k in enumerate('abcd')}},
-                     {k: v for v, k in enumerate('ab')},
-                     {k: v for v, k in enumerate('abc')},
-                     {k: v for v, k in enumerate('abcd')},
-                     {k: {k2: v2 for v2, k2 in enumerate('ab')} for k in 'ab'}],
+        'layer3_1': [
+          {"x":1,"y":7},
+          {"x":0,"y":4},
+          {"x":5,"y":3},
+          {"x":6,"y":9},
+          {'key': 'foo', 'value': 1},
+          {'key': 'foo', 'value': {k: v for v, k in enumerate('abcd')}},
+          {k: v for v, k in enumerate('ab')},
+          {k: v for v, k in enumerate('abc')},
+          {k: v for v, k in enumerate('abcd')},
+          {k: {k2: v2 for v2, k2 in enumerate('ab')} for k in 'ab'}
+        ],
         'layer3_2': 'string',
-        'layer3_3': [{"x":2,"y":8,"z":3}, {"x":1,"y":5,"z":4},
-                     {"x":6,"y":9,"z":8}],
+        'layer3_3': [
+          {"x":2,"y":8,"z":3},
+          {"x":1,"y":5,"z":4},
+          {"x":6,"y":9,"z":8}
+        ],
       },
       'layer2_2': {
         'layer3_4': [
@@ -190,13 +199,17 @@ if __name__ == '__main__':
     }
   }
   fname = "test_JSONEncoder.json"
-  #print(json.dumps(data,cls=JSONEncoder,sort_keys=True,indent=2,
-  #                      maxlistlen=25,maxdictlen=3,breakbrackets=False)) # print
-  print(dumps(data,sort_keys=True,indent=2,maxlistlen=25,maxdictlen=3,breakbrackets=False)) # print
+  dump  = dumps(data,sort_keys=True,indent=2,maxlistlen=25,maxdictlen=3,breakbrackets=False)
+  #dump = json.dumps(data,cls=JSONEncoder,sort_keys=True,indent=2,
+  #                  maxlistlen=25,maxdictlen=3,breakbrackets=False) # print
+  print(dump) # print
+  data2 = json.loads(dump) # check if loads, and retrieves the same data
+  assert data==data2, f"Data before / after encoding not the same!\nBefore: {data}\nAfter: {data2}"
   print(f">>> Writing {fname}...")
   write(data,fname) # write
   print(f">>> Loading {fname}...")
   with open(fname) as fin: # load
-    data2 = json.load(fin)
+    data3 = json.load(fin)
+  assert data==data3, f"Data before / after encoding not the same!\nBefore: {data}\nAfter: {data3}"
   #print(json.dumps(data2,cls=JSONEncoder,sort_keys=True,indent=2)) # print
   

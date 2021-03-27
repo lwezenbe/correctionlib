@@ -14,8 +14,8 @@ from utils import *
 def makecorr_ltf(sfs=None,**kwargs):
   """e -> tauh fake rate SF"""
   verb   = kwargs.get('verb',0)
+  outdir = kwargs.get('outdir',"data/tau")
   ltype  = kwargs.get('ltype','e')[0]
-  header(f"{ltype} -> tauh fake rate SF")
   allgms = [0,1,2,3,4,5,6] # all allowed genmatches
   if 'e' in ltype: # e -> tauh
     ebins = [0.0,1.460,1.558,2.3] # eta bins
@@ -28,14 +28,15 @@ def makecorr_ltf(sfs=None,**kwargs):
     id    = kwargs.get('id',   "unkown")
     era   = kwargs.get('era',  "unkown")
     name  = kwargs.get('name', f"tau_sf_dm_{id}_{era}")
-    fname = kwargs.get('fname',f"data/tau/{name}.json")
+    fname = kwargs.get('fname',f"{outdir}/{name}.json")
     info  = kwargs.get('info', f"DM-dependent SFs for {id} in {era}")
     ebins = kwargs.get('bins', ebins)
     wps   = list(sfs.keys())
   else: # test format with dummy values
     id    = kwargs.get('id',  "DeepTau2017v2p1VSjet")
+    header(f"Dummy {id} SFs for test")
     name  = kwargs.get('name', f"test_{id}_dm")
-    fname = kwargs.get('fname',f"data/tau/test_tau_{ltype}tf.json")
+    fname = kwargs.get('fname',f"{outdir}/test_tau_{ltype}tf.json")
     info  = kwargs.get('info', f"DM-dependent SFs for {id}")
     ebins = kwargs.get('bins', ebins)
     wps   = [
