@@ -37,50 +37,15 @@ def build_syst(val, err):
         }
     )
 
-#
-# Check if valid ROOT file exists
-#
-def isValidRootFile(fname):
-    if not os.path.exists(os.path.expandvars(fname)): return False
-    if 'pnfs' in fname: fname = 'root://maite.iihe.ac.be'+ fname         #faster for pnfs files + avoids certain unstable problems I had with input/output errors
-    f = ROOT.TFile.Open(fname)
-    if not f: return False
-    try:
-        return not (f.IsZombie() or f.TestBit(ROOT.TFile.kRecovered) or f.GetListOfKeys().IsEmpty())
-    finally:
-        f.Close()
-
-#
-# Get object (e.g. hist) from file using key, and keep in memory after closing
-#
-def getObjFromFile(fname, hname):
-    assert isValidRootFile(fname)
-
-    if 'pnfs' in fname: fname = 'root://maite.iihe.ac.be'+ fname         #faster for pnfs file
-    try:
-        f = ROOT.TFile.Open(fname)
-        f.cd()
-        htmp = f.Get(hname)
-        if not htmp: return None
-        ROOT.gDirectory.cd('PyROOT:/')
-        res = htmp.Clone()
-        return res
-    finally:
-        f.Close()
-
-#
-# Temporarily load in uproot file and regular root file because I could not get the up and down values to work with uproot yet
-#
 def build_pts(in_file, hist_name):
 
-    root_hist = getObjFromFile(in_file, hist_name)
-    uproot_f = uproot.open(in_file)
-    uproot_hist = uproot_f[hist_name]
+    f = uproot.open(in_file)
+    hist = f[hist_name]
 
-    edges = [x for x in uproot_hist.numpy()[1]]
+    edges = [x for x in hist.to_numpy()[1]]
     content = []
-    for ib, b in enumerate(uproot_hist.numpy()[0]):
-        content.append(build_syst(b, root_hist.GetBinError(ib+1)))
+    for val, err in zip(hist.values(), hist.errors()):
+        content.append(build_syst(val, err))
 
     return Binning.parse_obj(
         {
@@ -108,8 +73,8 @@ def test_trigger(corrs):
   header("Tau trigger SF, pT- and dm dependent")
   fname   = "data/tau/tau_trigger.json"
   dms     = [
-    -1, 0, 1, 10, 11
-    # -1
+    # -1, 0, 1, 10, 11
+    -1
   ]
   wps     = [
     #'VVVLoose', 'VVLoose', 'VLoose',
@@ -117,8 +82,8 @@ def test_trigger(corrs):
     #'VTight', 'VVTight'
   ]
   trigtypes = [
-      # 'ditau'
-      'ditau', 'etau', 'mutau'
+      'ditau'
+      # 'ditau', 'etau', 'mutau'
   ]
   ptbins  = [20.,25.,30.,35.,40.,500.,1000.]
   nptbins = len(ptbins)-1
@@ -258,7 +223,8 @@ def evaluate(corrs):
     wps = ['Loose']
     for wp in wps:
       print(f">>>\n>>> WP={wp}")
-      dms = [-1, 0, 1, 10, 11]
+      # dms = [-1, 0, 1, 10, 11]
+      dms = [-1]
       for dm in dms:
         print(f">>>\n>>> DM={dm}")
         print(">>> %8s"%("trigger type")+" ".join("  %-15.1f"%(p) for p in ptbins))
