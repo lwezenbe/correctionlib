@@ -1,5 +1,5 @@
 #! /usr/bin/env python3
-# Author: Izaak Neutelings (January 2021)
+# Author: Izaak Neutelings (March 2021)
 # Description: Script to play around with different formats, writing, reading, evaluating and validating.
 # Instructions: Download old SF files and run:
 #   svn checkout https://github.com/cms-tau-pog/TauIDSFs/trunk/data data/tau/old

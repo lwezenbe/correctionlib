@@ -2,7 +2,7 @@
 # Author: Izaak Neutelings (January 2021)
 # Description: Script to play around with format of TauPOG SFs.
 # Instructions:
-#  ./scripts/test.py
+#  ./scripts/tau_ltf.py
 # Sources:
 #   https://github.com/cms-tau-pog/TauIDSFs/blob/master/utils/createSFFiles.py
 #   https://github.com/cms-nanoAOD/correctionlib/blob/master/tests/test_core.py
@@ -18,12 +18,14 @@ def makecorr_ltf(sfs=None,**kwargs):
   ltype  = kwargs.get('ltype','e')[0]
   allgms = [0,1,2,3,4,5,6] # all allowed genmatches
   if 'e' in ltype: # e -> tauh
-    ebins = [0.0,1.460,1.558,2.3] # eta bins
-    gms   = [1,3]
+    ebins  = [0.0,1.460,1.558,2.3] # eta bins
+    ltfgms = [1,3]
+    ltfgm  = 1 # map 1, 3 -> 1
   else: # mu -> tauh
-    ltype = "mu"
-    ebins = [0.0,0.4,0.8,1.2,1.7,2.3] # eta bins
-    gms   = [2,4]
+    ltype  = "mu"
+    ebins  = [0.0,0.4,0.8,1.2,1.7,2.3] # eta bins
+    ltfgms = [2,4]
+    ltfgm  = 2 # map 2, 4 -> 2
   if sfs:
     id    = kwargs.get('id',   "unkown")
     era   = kwargs.get('era',  "unkown")
@@ -96,29 +98,31 @@ def makecorr_ltf(sfs=None,**kwargs):
       {'name': "syst",     'type': "string", 'description': getsystinfo()},
     ],
     'output': {'name': "weight", 'type': "real"},
-    'data': { # category:genmatch -> category:wp -> transform:eta -> binning:eta -> category:syst
-      #'nodetype': 'transform', # transform:eta
-      #'input': "genmatch",
-      #'rule': {
-      #  'nodetype': 'category', # category:genmatch
-      #  'input': "genmatch",
-      #  'default': 0, # everything else
-      #  'content': [ # key:genmatch
-      #    { 'key': gm,   'value': gm }, # l -> tau_h, prompt
-      #    { 'key': gm+2, 'value': gm }, # l -> tau_h, tau decay
-      #  ] # key:genmatch
-      #}, # category:genmatch
-      #'content': {
+    'data': { # transform:genmatch -> category:genmatch -> category:wp -> transform:eta -> binning:eta -> category:syst
+      'nodetype': 'transform', # transform:eta
+      'input': "genmatch",
+      'rule': {
         'nodetype': 'category', # category:genmatch
         'input': "genmatch",
-        #'default': 1.0, # no default: throw error if unrecognized genmatch
+        #'default': 0, # no default: throw error if unrecognized genmatch
         'content': [ # key:genmatch
           { 'key': gm,
-            'value': ltfdata if gm in gms else 1.0
+            'value': ltfgm if gm in ltfgms else 0 # map everything else onto 0
           } for gm in allgms
         ] # key:genmatch
-    } # category:genmatch
-    #} # transform:genmatch
+      }, # category:genmatch
+      'content': {
+        'nodetype': 'category', # category:genmatch
+        'input': "genmatch",
+        #'default': -1.0, # no default: throw error if unrecognized genmatch
+        'content': [ # key:genmatch
+          #{ 'key': 1, 'value': 1.0 }
+          { 'key': gm,
+            'value': ltfdata if gm in ltfgms else 1.0
+          } for gm in [0,ltfgm]
+        ] # key:genmatch
+      } # category:genmatch
+    } # transform:genmatch
   })
   if verb>1:
     print(JSONEncoder.dumps(corr))

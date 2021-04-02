@@ -2,7 +2,7 @@
 # Author: Izaak Neutelings (January 2021)
 # Description: Script to play around with format of TauPOG SFs.
 # Instructions:
-#  ./scripts/test.py
+#  ./scripts/tau_tes.py
 # Sources:
 #   https://github.com/cms-tau-pog/TauIDSFs/blob/master/utils/createSFFiles.py
 #   https://github.com/cms-nanoAOD/correctionlib/blob/master/tests/test_core.py

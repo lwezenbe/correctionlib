@@ -39,15 +39,16 @@ An error is thrown if
 ```
 year
 └─ ID (antiEle, DeepTau2017v2p1VSe)
-   └─ category:genmatch (0-5)
-      ├─ key:genmatch==1,3 (e -> tau fake)
-      │  └─ category:wp
-      │     └─ transform:eta (eta -> abs(eta))
-      │        └─ binned:eta
-      │           └─ category:syst (nom, up, down)
-      │              └─ float:sf
-      └─ key:genmatch==0,2,4,5,6
-         └─ float:1.0
+   └─ transform:genmatch (1,3 -> 1; 0,2,4,5,6 -> 0)
+      └─ category:genmatch
+         ├─ key:genmatch==1 (e -> tau fake)
+         │  └─ category:wp
+         │     └─ transform:eta (eta -> abs(eta))
+         │        └─ binned:eta
+         │           └─ category:syst (nom, up, down)
+         │              └─ float:sf
+         └─ key:genmatch==0
+            └─ float:1.0
 ```
 
 
@@ -60,15 +61,16 @@ An error is thrown if
 ```
 year
 └─ ID (antiMu, DeepTau2017v2p1VSmu)
-   └─ category:genmatch (0-5)
-      ├─ key:genmatch==2,4 (mu -> tau fake)
-      │  └─ category:wp
-      │     └─ transform:eta (eta -> abs(eta))
-      │        └─ category:syst (nom, up, down)
-      │           └─ binned:abseta
-      │              └─ float:sf
-      └─ key:genmatch==0,1,3,5,6
-         └─ float:1.0
+   └─ transform:genmatch (1,3 -> 1; 0,2,4,5,6 -> 0)
+      └─ category:genmatch (0-5)
+         ├─ key:genmatch==2,4 (mu -> tau fake)
+         │  └─ category:wp
+         │     └─ transform:eta (eta -> abs(eta))
+         │        └─ category:syst (nom, up, down)
+         │           └─ binned:abseta
+         │              └─ float:sf
+         └─ key:genmatch==0
+            └─ float:1.0
 ```
 
 
