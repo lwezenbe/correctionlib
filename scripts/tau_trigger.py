@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
 # Author: Izaak Neutelings (January 2021)
-# Description: Script to play around with format of TauPOG SFs.
+# Author: Liam Wezenbeek (April 2021)
+# Description: Script to play around with format of TauPOG trigger SFs. (based on tau_tid.py)
 # Instructions:
 #  ./scripts/test.py
 # Sources:
@@ -19,6 +20,7 @@ from correctionlib.schemav2 import (
     Correction,
     CorrectionSet,
     Formula,
+    Transform
 )
 
 #
@@ -43,8 +45,20 @@ def build_pts(in_file, hist_name):
     hist = f[hist_name]
 
     edges = [x for x in hist.to_numpy()[1]]
-    content = []
+    tmp_values = []
+    tmp_errors = []
+
+    bin_nb = 0
     for val, err in zip(hist.values(), hist.errors()):
+      if bin_nb > 0 and val == tmp_values[-1] and err == tmp_errors[-1]:
+        edges.pop(bin_nb)
+      else:
+        tmp_values.append(val)
+        tmp_errors.append(err)
+        bin_nb += 1
+
+    content = []
+    for val, err in zip(tmp_values, tmp_errors):
         content.append(build_syst(val, err))
 
     return Binning.parse_obj(
@@ -58,7 +72,13 @@ def build_pts(in_file, hist_name):
     )
 
 
-in_file_name = 'data/tau/2018_tauTriggerEff_DeepTau2017v2p1.root'
+dms     = [
+  -1, 0, 1, 10, 11
+]
+dms_merged     = [
+  -1, 0, 1, 10
+]
+
 dm_dict = {
   -1: 'dmall',
   0 : 'dm0',
@@ -66,66 +86,121 @@ dm_dict = {
   10 : 'dm10',
   11 : 'dm11'
 }
+
+dm_dict_merged = {
+  -1: 'dmall',
+  0 : 'dm0',
+  1 : 'dm1',
+  10 : 'dm1011',
+  11 : 'dm1011'
+}
+
+in_file_name = lambda year : 'data/tau/'+str(year)+'_tauTriggerEff_DeepTau2017v2p1.root'
 in_hist_name = lambda typ, wp, dm_str : '_'.join(['sf',typ,wp,dm_str,'fitted'])
+
+def build_dms(trigtype, wp, year):
+  print('Filling {0} {1} trigger for {2} WP'.format(year, trigtype, wp))
+
+  if not 'ditauvbf' in trigtype:
+    return Category.parse_obj(
+      {
+        'nodetype': 'category', # category:wp
+        'input': "dm",
+        'default': -1, # default DM if unrecognized category
+        'content': [
+          { 'key': dm,
+            'value': 
+              build_pts(in_file_name(year), in_hist_name(trigtype,wp,dm_dict[dm]))
+          } for dm in dms
+        ]
+      } # category:dm
+    )
+  else:
+    return Transform.parse_obj(
+      {
+        'nodetype': 'transform', # category:wp
+        'input': "dm",
+        'rule': {
+          'nodetype': 'category', # category:dm
+          'input': "dm",
+          'content': [ # key:dm
+            { 'key':  -1, 'value':  -1 },
+            { 'key':  0, 'value':  0 },
+            { 'key':  1, 'value':  1 },
+            { 'key': 10, 'value': 10 },
+            { 'key': 11, 'value': 10 }, # map 11 -> 10
+          ] # key:dm
+        }, # category:dm          
+        'content': {
+          'nodetype': 'category', # category:dm
+          'input': "dm",
+          'default': -1, # default DM if unrecognized genmatch
+          'content' : [
+            { 'key': dm,
+              'value': 
+                build_pts(in_file_name(year), in_hist_name(trigtype,wp,dm_dict_merged[dm]))
+            } for dm in dms_merged
+          ]
+        }
+      } # category
+    )
+
 
 def test_trigger(corrs):
   """Tau trigger SF, pT- and dm dependent."""
   header("Tau trigger SF, pT- and dm dependent")
   fname   = "data/tau/tau_trigger.json"
-  dms     = [
-    # -1, 0, 1, 10, 11
-    -1
+  years = [
+    # 2016, 2017, 2018
+    2017
   ]
   wps     = [
-    #'VVVLoose', 'VVLoose', 'VLoose',
+    # 'VVVLoose', 'VVLoose', 'VLoose',
     'Loose', 'Medium', 'Tight',
-    #'VTight', 'VVTight'
+    # 'VTight', 'VVTight'
   ]
-  trigtypes = [
-      'ditau'
-      # 'ditau', 'etau', 'mutau'
-  ]
-  ptbins  = [20.,25.,30.,35.,40.,500.,1000.]
-  nptbins = len(ptbins)-1
-  sfs     = {wp: [(1.,0.2,0.2) for i in range(nptbins)] for wp in wps}
+  trigtypes = {
+      2016 : ['ditau', 'etau', 'mutau'],
+      2017 : ['ditau', 'etau', 'mutau', 'ditauvbf'],
+      2018 : ['ditau', 'etau', 'mutau', 'ditauvbf'],
+  }
   corr    = Correction.parse_obj({
     'version': 0,
     'name':    "test_DeepTau2017v2p1VSjet",
     'inputs': [
       {'name': "pt",       'type': "real",   'description': "tau pt"},
+      {'name': "year",       'type': "int",   'description': "year of datataking"},
       {'name': "trigtype",       'type': "string",    'description': "Type of trigger: 'ditau', 'etau', 'mutau'"},
       {'name': "wp",       'type': "string", 'description': "DeepTauVSjet WP: VVVLoose-VVTight"},
       {'name': "syst",     'type': "string", 'description': "systematic 'nom', 'up', 'down'"},
       {'name': "dm",       'type': "int",    'description': "tau decay mode (0, 1, 10, or 11)"},
     ],
     'output': {'name': "weight", 'type': "real"},
-    'data': { # category:trigtype -> category:wp -> binning:pt -> category:syst
-      'nodetype': 'category', # category:genmatch
-      'input': "trigtype",
-      'content': [
-        { 'key': trigtype,
-          'value': {
-            'nodetype': 'category', # category:dm
-            'input': "dm",
-            'default': -1, # default TES if unrecognized genmatch
+    'data': { # category:year -> category:trigtype -> category:wp -> category dm -> binning:pt -> category:syst
+      'nodetype' : 'category',
+      'input' : 'year',
+      'content' : [
+        { 'key' : year,
+          'value' : {
+            'nodetype': 'category', # category:genmatch
+            'input': "trigtype",
             'content': [
-              { 'key': dm,
-                'value' : {
-                  'nodetype': 'category', # category:wp
+              { 'key': trigtype,
+                'value': {
+                  'nodetype': 'category', # category:dm
                   'input': "wp",
                   'content': [
                     { 'key': wp,
-                      'value': 
-                        build_pts(in_file_name, in_hist_name(trigtype,wp,dm_dict[dm]))
+                      'value' : build_dms(trigtype, wp, year)
                     } for wp in wps
-                  ]
+                  ]  
                 } # category:wp
-              } for dm in dms
-            ]  
-          } # category:dm
-        } for trigtype in trigtypes
+              } for trigtype in trigtypes[year]
+            ]
+          } #category:trigtype
+        } for year in years
       ]
-    } # category:genmatch
+    } # category:year
   })
   print(corr)
   # print(corr.data.content)
@@ -220,22 +295,21 @@ def evaluate(corrs):
   for name in list(cset):
     corr = cset[name]
     print(f">>>\n>>> {name}: {corr.description}")
-    wps = ['Loose']
+    wps = ['Loose', 'Medium', 'tight']
     for wp in wps:
       print(f">>>\n>>> WP={wp}")
-      # dms = [-1, 0, 1, 10, 11]
-      dms = [-1]
+      dms = [-1, 0, 1, 10, 11]
       for dm in dms:
         print(f">>>\n>>> DM={dm}")
         print(">>> %8s"%("trigger type")+" ".join("  %-15.1f"%(p) for p in ptbins))
-        for tt in ['ditau', 'etau', 'mutau']:
+        for tt in ['ditau', 'etau', 'mutau', 'ditauvbf']:
           row = ">>> %s"%(tt)
           for pt in ptbins:
             sfnom = 0.0
-            for syst in ['nom','up','down']:
+            for syst in ['nominal','up','down']:
               #print(">>>   gm=%d, eta=%4.1f, syst=%r sf=%s"%(gm,eta,syst,eval(corr,eta,gm,wp,syst)))
               try:
-                sf = corr.evaluate(pt,tt,wp,syst,20)
+                sf = corr.evaluate(pt, 2017, tt,wp,syst,dm)
                 if 'nom' in syst:
                   row += "%6.2f"%(sf)
                   sfnom = sf
