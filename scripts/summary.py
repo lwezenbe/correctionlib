@@ -10,13 +10,15 @@ def bold(string):
     return f"\033[1m{string}\033[0m" if _highlight else str(string)
     
 
-def validate(fname,sname=f"../src/correctionlib/schemav{version}.json"):
+def validate(fname,sname=None):
     """Validate file according to JSON schema."""
     with open(fname,'r') as file:
         data = json.load(file)
     assert isinstance(data,dict), "Invalid schema: Did not find a dictionary."
     assert 'schema_version' in data, "Invalid schema: Did not find 'schema_version'."
     version = data['schema_version']
+    if sname==None:
+      sname = f"../src/correctionlib/schemav{version}.json"
     with open(sname,'r') as file:
         schema = json.load(file)
     out = jsonschema.validate(data,schema)
