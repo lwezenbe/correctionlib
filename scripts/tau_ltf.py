@@ -14,8 +14,9 @@ from utils import *
 def makecorr_ltf(sfs=None,**kwargs):
   """e -> tauh fake rate SF"""
   verb   = kwargs.get('verb',0)
-  outdir = kwargs.get('outdir',"data/tau")
-  ltype  = kwargs.get('ltype','e')[0]
+  tag    = kwargs.get('tag',"") # output tag for JSON file
+  outdir = kwargs.get('outdir',"data/tau") # output directory for JSON file
+  ltype  = kwargs.get('ltype','mu' if 'mu' in kwargs.get('id','e').lower() else 'e')[0]
   allgms = [0,1,2,3,4,5,6] # all allowed genmatches
   if 'e' in ltype: # e -> tauh
     ebins  = [0.0,1.460,1.558,2.3] # eta bins
@@ -29,16 +30,16 @@ def makecorr_ltf(sfs=None,**kwargs):
   if sfs:
     id    = kwargs.get('id',   "unkown")
     era   = kwargs.get('era',  "unkown")
-    name  = kwargs.get('name', f"tau_sf_dm_{id}_{era}")
-    fname = kwargs.get('fname',f"{outdir}/{name}.json")
+    name  = kwargs.get('name', f"tau_sf_eta_{id}_{era}")
+    fname = kwargs.get('fname',f"{outdir}/{name}{tag}.json")
     info  = kwargs.get('info', f"DM-dependent SFs for {id} in {era}")
     ebins = kwargs.get('bins', ebins)
     wps   = list(sfs.keys())
   else: # test format with dummy values
     id    = kwargs.get('id',  "DeepTau2017v2p1VSjet")
     header(f"Dummy {id} SFs for test")
-    name  = kwargs.get('name', f"test_{id}_dm")
-    fname = kwargs.get('fname',f"{outdir}/test_tau_{ltype}tf.json")
+    name  = kwargs.get('name', f"test_{id}_eta")
+    fname = kwargs.get('fname',f"{outdir}/test_tau_{ltype}tf{tag}.json")
     info  = kwargs.get('info', f"DM-dependent SFs for {id}")
     ebins = kwargs.get('bins', ebins)
     wps   = [
@@ -48,48 +49,50 @@ def makecorr_ltf(sfs=None,**kwargs):
     ]
     sfs   = {wp: [(1.0,1.1,0.9) for s in range(len(ebins)-1)] for wp in wps}
   wps.sort(key=wp_sortkey)
-  print(f">>> etabins={ebins}")
+  if verb>=1:
+    print(f">>> etabins={ebins}")
   
   # LTF DATA
-  ltfdata = {
-    'nodetype': 'category', # category:wp
-    'input': "wp",
-    'content': [ # key:wp
-      { 'key': wp, # key:wp==wp
-        'value': {
-          'nodetype': 'transform', # transform:eta
-          'input': "eta",
-          'rule': {
-            'nodetype': 'formula',
-            'expression': "abs(x)",
-            'parser': "TFormula",
-            'variables': ["eta"],
-          },
-          'content': {
+  ltfdata = schema.Transform.parse_obj({
+    'nodetype': 'transform', # transform:eta
+    'input': "eta",
+    'rule': {
+      'nodetype': 'formula',
+      'expression': "abs(x)",
+      'parser': "TFormula",
+      'variables': ["eta"],
+    },
+    'content': schema.Category.parse_obj({
+      'nodetype': 'category', # category:wp
+      'input': "wp",
+      'content': [ # key:wp
+        { 'key': wp, # key:wp==wp
+          'value':  schema.Binning.parse_obj({
             'nodetype': 'binning', # binning:eta
             'input': "eta",
             'edges': ebins,
             'flow': "clamp", # do
             'content': [ # bin:eta
-              { 'nodetype': 'category', # category:syst
+              schema.Category.parse_obj({
+                'nodetype': 'category', # category:syst
                 'input': "syst",
                 'content': [ # key:syst
                   { 'key': 'nom',  'value': bin[0] }, # central
                   { 'key': 'up',   'value': bin[1] }, # up
                   { 'key': 'down', 'value': bin[2] }, # down
                 ] # key:syst
-              } for bin in sfs[wp]
+              }) for bin in sfs[wp]
             ] # bin:eta
-          } # binning:eta
-        } # transform:eta
-      } for wp in wps # key:wp==wp
-    ] # key:wp
-  } # category:wp
+          }) # binning:eta
+        } for wp in wps # key:wp==wp
+      ] # key:wp
+    }) # category:wp
+  }) # transform:eta
   
   # CORRECTION OBJECT
-  corr  = Correction.parse_obj({
+  corr  = schema.Correction.parse_obj({
     'version': 0,
-    'name': f"DeepTau2017v2p1VS{ltype}_test",
+    'name': name,
     'description': f"{ltype} -> tau_h fake rate SFs for DeepTau2017v2p1VS{ltype}",
     'inputs': [
       {'name': "eta",      'type': "real",   'description': "Reconstructed tau eta"},
@@ -98,8 +101,8 @@ def makecorr_ltf(sfs=None,**kwargs):
       {'name': "syst",     'type': "string", 'description': getsystinfo()},
     ],
     'output': {'name': "weight", 'type': "real"},
-    'data': { # transform:genmatch -> category:genmatch -> category:wp -> transform:eta -> binning:eta -> category:syst
-      'nodetype': 'transform', # transform:eta
+    'data': { # transform:genmatch -> category:genmatch -> transform:eta -> category:wp -> binning:eta -> category:syst
+      'nodetype': 'transform', # transform:genmatch
       'input': "genmatch",
       'rule': {
         'nodetype': 'category', # category:genmatch
@@ -136,7 +139,7 @@ def makecorr_ltf(sfs=None,**kwargs):
 
 def evaluate(corrs):
   header("Evaluate")
-  cset_py, cset = wrap(corrs) # wrap to create C++ object that can be evaluated
+  cset  = wrap(corrs) # wrap to create C++ object that can be evaluated
   ebins = [-2.0,-1.0,0.0,1.1,2.0,2.5,3.0]
   gms   = [0,1,2,3,4,5,6,7]
   for name in list(cset):

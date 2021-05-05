@@ -1,10 +1,25 @@
 #! /usr/bin/env python3
 # Author: Izaak Neutelings (April 2021)
 # Description: Script to test integer mapping.
+import re
 import json, jsonschema
 _highlight = False # global setting
+_fexps = [ ] # patterns to replace variable in TFormula
 
 
+def getfexps(nvars):
+    """Compile regexp for arbitrary nvars variables in TFormula only once."""
+    fexps = ["(x(?!\[)|x\[0\])",r"(y|x\[1\])",r"(z|x\[2\])",r"(t|x\[3\])"]
+    if len(_fexps)<nvars:
+        if len(_fexps)<len(fexps):
+            for rexp in fexps[len(_fexps):nvars]:
+                _fexps.append(re.compile(r"(?<!\w)"+rexp+r"(?!\w)"))
+        if len(_fexps)<nvars:
+            for index in range(len(_fexps),nvars):
+                _fexps.append(re.compile(r"(?<!\w)"+f"x\[{index}\]"+r"(?!\w)"))
+    return _fexps
+    
+  
 def bold(string):
     """Highlight in bold."""
     return f"\033[1m{string}\033[0m" if _highlight else str(string)
@@ -30,7 +45,14 @@ def dumpplain_content(data,depth=0,indent="  "):
     ntype = data['nodetype']
     if ntype=='binning':
         input = data['input']
+        edges = data['edges']
+        flow = data['flow']
         print(f"{indent}{ntype}:{bold(input)}")
+        #if len(edges)>=2:
+        nbins, xmin, xmax = len(edges)-1, edges[0], edges[-1]
+        #width = edges[1] - edges[0]
+        #varbin = any(edges[i]+edges[i+1]!=width for i in range(1,nbins)) # variable binning
+        print(f"{indent}bins: {xmin}-{xmax} (over/underflow: {flow})")
     elif ntype=='multibinning':
         input = ','.join(data['inputs'])
         print(f"{indent}{ntype}:{bold(input)}")
@@ -47,8 +69,12 @@ def dumpplain_content(data,depth=0,indent="  "):
                     dumpplain_content(item['value'],depth=depth-1,indent=indent+"    ")
         return
     elif ntype=='formula':
-        input = ','.join(data['variables'])
-        print(f"{indent}{ntype}:{bold(input)}")
+        vars = data['variables']
+        form = data['expression']
+        for var, fexp in zip(vars,getfexps(len(vars))):
+            form = fexp.sub(var,form) # replace x, y, z, t, x[i] with given variables
+        input = ','.join(bold(v) for v in vars)
+        print(f"{indent}{ntype}({input}) = {form}")
         return
     elif ntype=='transform':
         input = data['input']
@@ -95,7 +121,7 @@ if __name__ == '__main__':
     from argparse import ArgumentParser
     argv = sys.argv
     description = """Summarize JSON file's content."""
-    parser = ArgumentParser(prog="summary",description=description,epilog="Succes!")
+    parser = ArgumentParser(prog="summary",description=description,epilog="Good luck!")
     parser.add_argument("fnames", nargs='+', help="JSON file to summarize")
     parser.add_argument("--format", choices=["plain","html","markdown"], default="plain", help="format of summary")
     parser.add_argument("-d", "--maxdepth", type=int, default=0, help="maximum depth in correction object (-1 = infinite)")

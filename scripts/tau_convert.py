@@ -3,7 +3,9 @@
 # Description: Script to play around with different formats, writing, reading, evaluating and validating.
 # Instructions: Download old SF files and run:
 #   svn checkout https://github.com/cms-tau-pog/TauIDSFs/trunk/data data/tau/old
-#   ./scripts/tau_convert.py data/tau/old/*root -v1
+#   ./scripts/tau_convert.py data/tau/old/TauID*pt*VSjet*root -v1
+#   ./scripts/tau_convert.py data/tau/old/TauID*dm*VSjet*root -v1
+#   ./scripts/tau_convert.py data/tau/old/TauES*root data/tau/old/TauFES*root -v1
 # Sources:
 #   https://github.com/cms-tau-pog/TauIDSFs/blob/master/utils/createSFFiles.py
 #   https://github.com/cms-nanoAOD/correctionlib/blob/master/tests/test_core.py
@@ -20,17 +22,12 @@ rexp_era  = re.compile(r"(?<=_)20[0123]\d(?!v\d)[^_.]+")
 rexp_num  = re.compile(r"[-+]?\d+\.?\d*")
 rexp_tid  = re.compile(r"\(([^)&]+)(?:&&)?([^)&]*)\)\*([-+]*[\d.]+|\([^)]+\))") # "(x<=25)*1.0+(x>20&&x<=25)*1.0+..."
 
-
-def reusesf(sfs,dm1,dm2):
-  if dm1 in sfs and dm2 not in sfs: # reuse dm1 for dm2
-    print(warn(f"Reusing DM{dm1} SF {sfs[dm1]} for DM{dm2} SF..."))
-    sfs[dm2] = sfs[dm1]
-  return sfs[dm1]
   
 
 
 def main(args):
   fnames    = args.fnames
+  tag       = args.tag
   verbosity = args.verbosity
   prec      = 7 # precision of SFs
   lprec     = 5 # precision of l -> tau_h SFs
@@ -53,6 +50,7 @@ def main(args):
       print(warn(f"{fname}: Ignoring embedded SFs for now..."))
       continue
     match = rexp_fjet.match(fname)
+    print(0,fname)
     if match:
       param, id, era, tag = match.groups()
       if param=='pt': #fname.startswith("TauID_SF_pt_"):
@@ -87,7 +85,7 @@ def main(args):
       if "DeepTau" not in id and 'ele' not in infiles['tes'][era][id] and\
          infiles['tes'][era].get("DeepTau2017v2p1",{ }).get('ele',False):
         infiles['tes'][era][id]['ele'] = infiles['tes'][era]["DeepTau2017v2p1"]['ele']
-  if verbosity>0:
+  if verbosity>=1:
     print(JSONEncoder.dumps(infiles)) # print all categorized files
   
   # TAU ANTI-JET SFs
@@ -97,7 +95,7 @@ def main(args):
         header(f"DM-dependent {id} SFs in {era}")
         print(f">>>   {fname}")
         fname = infiles['jet'][era][id]['dm']
-        file = TFile.Open(fname)
+        file = ensureTFile(fname)
         sfs = { } # wp -> dm -> (sf,up,down)
         for key in file.GetListOfKeys():
           if not gROOT.GetClass(key.GetClassName()).InheritsFrom('TH1'): continue
@@ -120,11 +118,11 @@ def main(args):
           print(JSONEncoder.dumps(sfs))
         corr = makecorr_tid_dm(sfs,id=id,era=era,
                                outdir=outdir,verb=verbosity)
-      elif 'pt' in infiles['jet'][era][id]: # pT-dependent
+      if 'pt' in infiles['jet'][era][id]: # pT-dependent
         fname = infiles['jet'][era][id]['pt']
         header(f"pT-dependent {id} SFs in {era}")
         print(f">>>   {fname}")
-        file = TFile.Open(fname)
+        file = ensureTFile(fname)
         sfs = { }
         for key in file.GetListOfKeys():
           if not gROOT.GetClass(key.GetClassName()).InheritsFrom('TF1'): continue
@@ -142,9 +140,10 @@ def main(args):
           sfs[wp] = [ ]
           xmax    = -1
           if verbosity>0:
-            print(">>> fnom  = %r"%(fnom))
-            print(">>> fup   = %r"%(fup))
-            print(">>> fdown = %r"%(fdown))
+            print(">>> WP=%r"%(wpnom))
+            print(">>>   fnom  = %r"%(fnom))
+            print(">>>   fup   = %r"%(fup))
+            print(">>>   fdown = %r"%(fdown))
           assert len(fnom)==len(fup)-2 and len(fnom)==len(fdown)-2, "Number of bins does not match: %s, %s, %s"%(fnom,fup,fdown)
           for snom, sup, sdown in zip(fnom,fup,fdown):
             if snom[2].replace('.','',1).isdigit() and float(snom[2])<=0: continue
@@ -177,17 +176,17 @@ def main(args):
           print(f">>> ptbins={ptbins}")
           print(JSONEncoder.dumps(sfs))
         corr = makecorr_tid_pt(sfs,id=id,era=era,
-                               outdir=outdir,verb=verbosity)
+                               outdir=outdir,tag=tag,verb=verbosity)
         file.Close()
   
-  # TAU ANTI-ELECTRON SFs
+  # TAU ANTI-ELECTRON/MUON SFs
   for ltype in ['e','mu']:
     for era in infiles[ltype]:
       for id in infiles[ltype][era]:
         fname = infiles[ltype][era][id]
         header(f"{ltype} -> tauh fake rate SF for {id} in {era} from")
         print(f">>>   {fname}")
-        file = TFile.Open(fname)
+        file = ensureTFile(fname)
         sfs = { } # wp -> (sf,up,down)
         for key in file.GetListOfKeys():
           if not gROOT.GetClass(key.GetClassName()).InheritsFrom('TH1'): continue
@@ -212,7 +211,7 @@ def main(args):
           print(f">>> etabins={ebins}")
           print(JSONEncoder.dumps(sfs))
         corr = makecorr_ltf(sfs,id=id,era=era,ltype=ltype,bins=ebins,
-                            outdir=outdir,verb=verbosity)
+                            outdir=outdir,tag=tag,verb=verbosity)
   
   # TAU ENERGY SCALES
   for era in infiles['tes']:
@@ -222,7 +221,6 @@ def main(args):
       fnames = infiles['tes'][era][id]
       print(f">>>   "+"\n>>>   ".join(fnames.values()))
       tesvals = {
-      
         'low':  { }, # DM-dependent, low pT, real tau_h
         'high': { }, # DM-dependent, high pT, real tau_h
         'ele':  { }, # DM-/eta-dependent, e -> tau_h
@@ -230,7 +228,7 @@ def main(args):
       ptbins  = [0.,34.,170.]
       etabins = [0.,1.5,2.5]
       for key, fname in fnames.items():
-        file = TFile.Open(fname)
+        file = ensureTFile(fname)
         if key=='ele':
           # See
           #  https://github.com/cms-tau-pog/TauIDSFs/blob/127e021f1616f1480837a62742b775cd42bcc9ac/utils/createSFFiles.py#L111-L117
@@ -243,7 +241,7 @@ def main(args):
               fesup = round(fes+graph.GetErrorYhigh(i),prec)
               fesdn = round(fes-graph.GetErrorYlow(i),prec)
               fes   = round(graph.GetPointY(i),prec)
-              tesvals[key].setdefault(dm,[ ]).append((fes,fes+fesup,fes-fesdn))
+              tesvals[key].setdefault(dm,[ ]).append((fes,fesup,fesdn))
               i += 1
           tesvals[key][2] = tesvals[key][1][:] # reuse DM1 for DM2
         else:
@@ -264,15 +262,16 @@ def main(args):
         #print(f">>> etabins={ebins}")
         print(JSONEncoder.dumps(tesvals))
       corr = makecorr_tes(tesvals,id=id,era=era,ptbins=ptbins,etabins=etabins,
-                          outdir=outdir,verb=verbosity)
+                          outdir=outdir,tag=tag,verb=verbosity)
   
 
 if __name__ == '__main__':
   from argparse import ArgumentParser
   argv = sys.argv
-  description = '''This script creates datacards with CombineHarvester.'''
-  parser = ArgumentParser(prog="tau/convert.py",description=description,epilog="Succes!")
+  description = '''This script creates ROOT files for hardcoded TauPOG scale factors.'''
+  parser = ArgumentParser(prog="tau/convert.py",description=description,epilog="Good luck!")
   parser.add_argument('fnames',           nargs='+', action='store', help="file names" )
+  parser.add_argument('-t', '--tag',      help="extra tag for JSON output file" )
   parser.add_argument('-v', '--verbose',  dest='verbosity', type=int, nargs='?', const=1, default=0,
                                           help="set verbosity" )
   args = parser.parse_args()

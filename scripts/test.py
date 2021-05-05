@@ -287,8 +287,7 @@ def read():
 
 def evaluate(corrs):
   header("Evaluate")
-  cset_py, cset = wrap(corrs) # wrap to create C++ object that can be evaluated
-  print(f">>> Wrap: {type(cset_py)} -> {type(cset)}")
+  cset = wrap(corrs) # wrap to create C++ object that can be evaluated
   #print([x.name for x in cset_py.corrections])
   #print([x for x in list(cset)])
   for name in list(cset):

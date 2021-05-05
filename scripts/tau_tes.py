@@ -10,92 +10,108 @@
 import sys; sys.path.append('scripts')
 from utils import *
 from collections import namedtuple
-TES = namedtuple('TES',['nom','up_lowpt','dn_lowpt','up_highpt','dn_highpt']) # helper class
+#TES = namedtuple('TES',['nom','up','dn_lowpt','nom_highpt','up_highpt','dn_highpt']) # helper class
 
 
-def maketes(tes):
+def maketes(teslow,teshigh,prec=8):
   """Interpolate."""
   # f = TFormula('f',sf)
   # for x in [10,34,35,(170+34)/2,100,169.9,170,171,200,2000]: x, f.Eval(x)
   #return f"x<34?{low}: x<170?{low}+({high}-{low})/(170.-34.)*(x-34): {high}"
-  gradup = (tes.up_highpt-tes.up_lowpt)/(170.-34.)
-  graddn = (tes.dn_highpt-tes.dn_lowpt)/(170.-34.)
-  offsup = tes.nom+tes.up_lowpt-34.*gradup
-  offsdn = tes.nom-tes.dn_lowpt+34.*graddn
-  data   = [ # key:syst
-    { 'key': 'nom',  'value': tes.nom }, # central value
+  tesnom = teslow[0] # use low-pT as central value for whole pT range
+  uncup_low,  uncdn_low  = teslow[1]-teslow[0],   teslow[0]-teslow[2]
+  uncup_high, uncdn_high = teshigh[1]-teshigh[0], teshigh[0]-teshigh[2]
+  gradup = round((uncup_high-uncup_low)/(170.-34.),prec+2)
+  graddn = round((uncdn_high-uncdn_low)/(170.-34.),prec+2)
+  offsup = round(teslow[1],prec) #tesnom+uncup_low-34.*gradup
+  offsdn = round(teslow[2],prec) #tesnom-uncdn_low+34.*graddn
+  if uncup_low>uncup_high:
+    print(warn("Low-pT TES up %.3f > high-pT TES up %.3f !!!"%(uncup_low,uncup_high)))
+  if uncdn_low>uncdn_high:
+    print(warn("Low-pT TES down %.3f > high-pT TES down %.3f !!!"%(uncdn_low,uncdn_high)))
+  data = [ # key:syst
+    { 'key': 'nom',  'value': tesnom }, # central value
     { 'key': 'up', 'value': { # down
         'nodetype': 'binning',
         'input': "pt",
         'edges': [0.,34.,170.,1000.],
         'flow': "clamp",
         'content': [
-          tes.nom+tes.up_lowpt,
+          teslow[1],
           { 'nodetype': 'formula', # down (pt-dependent)
-            'expression': "%.6g+%.6g*x"%(offsup,gradup),
+            'expression': "%.6g+%.6g*(x-34.)"%(offsup,gradup),
             'parser': "TFormula",
             'variables': ["pt"],
           },
-          tes.nom+tes.up_highpt,
+          tesnom+uncup_high,
         ],
       },
-    },
+    }, # key:syst=up
     { 'key': 'down', 'value': { # down
         'nodetype': 'binning',
         'input': "pt",
         'edges': [0.,34.,170.,1000.],
         'flow': "clamp",
         'content': [
-          tes.nom-tes.dn_highpt,
+          teslow[2],
           { 'nodetype': 'formula', # down (pt-dependent)
-            'expression': "%.6g-%.6g*x"%(offsdn,graddn),
+            'expression': "%.6g-%.6g*(x-34.)"%(offsdn,graddn),
             'parser': "TFormula",
             'variables': ["pt"],
           },
-          tes.nom-tes.dn_highpt,
+          tesnom-uncdn_high,
         ],
       },
-    },
-  ]
+    }, # key:syst=down
+  ] # key:syst
   return data
   
 
 def makecorr_tes(tesvals=None,**kwargs):
-  """TES"""
+  """Make Correction object JSON for tau energy scale from dictionary:
+  tesvals = {
+    'low':  { dm: (nom,uncup,uncdn) }, # low pT measurement in Z -> tautau -> mutau_h
+    'high': { dm: (nom,uncup,uncdn) }, # high pT measurement in W* + jets
+    'ele':  { dm: [(nom,uncup,uncdn),(nom,uncup,uncdn)] }, # per eta bin
+  }
+  """
   verb    = kwargs.get('verb',0)
-  outdir  = kwargs.get('outdir',"data/tau")
-  info    = ", to be applied to reconstructed tau_h pt, mass and energy in simulated data"
-  ptbins  = [0.,34.,170.]
-  etabins = [0.,1.5,2.5]
+  tag     = kwargs.get('tag',"") # output tag for JSON file
+  outdir  = kwargs.get('outdir',"data/tau") # output directory for JSON file
+  info    = ", to be applied to reconstructed tau_h Lorentz vector (pT, mass and energy) in simulated data"
+  #dms     = (0,1,2,5,6,10,11)
+  gms     = (0,1,2,3,4,5,6)
+  ptbins  = (0.,34.,170.)
+  etabins = (0.,1.5,2.5)
   if tesvals:
     id      = kwargs.get('id',   "unkown")
     era     = kwargs.get('era',  "unkown")
-    name    = kwargs.get('name', f"tau_sf_dm_{id}_{era}")
-    fname   = kwargs.get('fname',f"{outdir}/{name}.json")
+    name    = kwargs.get('name', f"tau_es_dm_{id}_{era}")
+    fname   = kwargs.get('fname',f"{outdir}/{name}{tag}.json")
     info    = kwargs.get('info', f"DM-dependent tau energy scale for {id} in {era}"+info)
     ptbins  = kwargs.get('ptbins',ptbins)
     etabins = kwargs.get('etabins',etabins)
     dms     = list(tesvals['low'].keys())
     fesdms  = list(tesvals['ele'].keys())
-    fesvals = tesvals['ele'] # dm -> (nom,up,down)
+    fesvals = tesvals['ele'] # dm -> [(nom,up,down),(nom,up,down)] per eta bin
     tesvals = { # dm -> TES(nom,uplow,downlow,uphigh,downhigh)
-      dm: TES(*tesvals['low'][dm],*tesvals['high'][dm][1:]) for dm in dms
+      dm: (tesvals['low'][dm],tesvals['high'][dm]) for dm in dms
     }
   else: # test format with dummy values
     id      = kwargs.get('id',  "DeepTau2017v2p1VSjet")
     header(f"Tau energy scale for {id}")
     name    = kwargs.get('name', f"test_{id}_dm")
-    fname   = kwargs.get('fname',f"{outdir}/test_tau_tes.json")
+    fname   = kwargs.get('fname',f"{outdir}/test_tau_tes{tag}.json")
     info    = kwargs.get('info', f"DM-dependent tau energy scale for {id}"+info)
-    dms     = [0,1,2,10,11]
-    fesdms  = [0,1,2] # for FES only DM0 and 1
-    tesvals = {dm: TES(1.0,0.1,0.1,0.2,0.2) for dm in dms} # (nom,uplow,downlow,uphigh,downhigh)
-    fesvals = {dm: [(1.0,1.2,0.8)]*(len(etabins)-1) for dm in fesdms} # (nom,up,down)
+    dms     = (0,1,2,10,11)
+    fesdms  = (0,1,2) # for FES only DM0 and 1
+    tesvals = {dm: ((1.0,1.1,0.9),(1.0,1.2,0.8)) for dm in dms} # (nom,uplow,downlow,uphigh,downhigh)
+    fesvals = {dm: [(1.0,1.2,0.8)]*(len(etabins)-1) for dm in fesdms} # (nom,up,down) per eta bin
   dms.sort()
   fesdms.sort()
   
   # REAL TAU (genmatch==5)
-  tesdata = { # category:dm -> category:syst
+  tesdata = schema.Category.parse_obj({ # category:dm -> category:syst
     'nodetype': 'category', # category:dm
     'input': "dm",
     #'default': 1.0, # no default: throw error if unsupported DM
@@ -104,14 +120,14 @@ def makecorr_tes(tesvals=None,**kwargs):
         'value': {
           'nodetype': 'category', # category:syst
           'input': "syst",
-          'content': maketes(tesvals[dm])
+          'content': maketes(*tesvals[dm])
         } # category:syst
       } for dm in dms
     ] # key:dm
-  } # category:dm
+  }) # category:dm
   
   # E -> TAU FAKE (genmatch==1,3)
-  fesdata = { # category:dm -> transform:eta -> binning:eta -> category:syst
+  fesdata = schema.Category.parse_obj({ # category:dm -> transform:eta -> binning:eta -> category:syst
     'nodetype': 'category', # category:dm
     'input': "dm",
     #'default': 1.0, # no default: throw error if unsupported DM
@@ -148,10 +164,10 @@ def makecorr_tes(tesvals=None,**kwargs):
       { 'key': dm, 'value': 1.0 } # default for supported DMs
       for dm in dms if dm not in fesdms
     ] # key:dm
-  } # category:dm
+  }) # category:dm
   
   # MU -> TAU FAKE (genmatch==2,4)
-  mesdata = {
+  mesdata = schema.Category.parse_obj({
     'nodetype': 'category', # category:syst
     'input': "syst",
     'content': [
@@ -159,40 +175,54 @@ def makecorr_tes(tesvals=None,**kwargs):
       { 'key': 'up',   'value': 1.01 },
       { 'key': 'down', 'value': 0.99 },
     ]
-  } # category:syst
+  }) # category:syst
   
   # CORRECTION OBJECT
-  corr = Correction.parse_obj({
+  corr = schema.Correction.parse_obj({
     'version': 0,
-    'name': "test_tau_energy_scale",
+    'name': name,
     'description': info,
     'inputs': [
-      {'name': "pt",       'type': "real",   'description': "Reconstructed tau pt"},
+      {'name': "pt",       'type': "real",   'description': "Reconstructed tau pT"},
       {'name': "eta",      'type': "real",   'description': "Reconstructed tau eta"},
       {'name': "dm",       'type': "int",    'description': getdminfo(dms)},
       {'name': "genmatch", 'type': "int",    'description': getgminfo()},
       {'name': "syst",     'type': "string", 'description': getsystinfo()},
     ],
     'output': {'name': "weight", 'type': "real"},
-    'data': { # category:genmatch -> key:genmatch
-      'nodetype': 'category', # category:genmatch
+    'data': { # transform:genmatch -> category:genmatch -> key:genmatch
+      'nodetype': 'transform', # transform:genmatch
       'input': "genmatch",
-      #'default': 1.0, # no default: throw error if unrecognized genmatch
-      'content': [
-        { 'key': 1, 'value': fesdata }, # e  -> tau_h fake
-        { 'key': 2, 'value': mesdata }, # mu -> tau_h fake
-        { 'key': 3, 'value': fesdata }, # e  -> tau_h fake
-        { 'key': 4, 'value': mesdata }, # mu -> tau_h fake
-        { 'key': 5, 'value': tesdata }, # real tau_h
-        { 'key': 6, 'value': 1.0 }, # j  -> tau_h fake
-        { 'key': 0, 'value': 1.0 }, # j  -> tau_h fake
-      ]
-    } # category:genmatch
+      'rule': {
+        'nodetype': 'category', # category:genmatch
+        'input': "genmatch",
+        #'default': 0, # no default: throw error if unrecognized genmatch
+        'content': [ # key:genmatch
+          { 'key': gm,
+            'value': 1 if gm in [1,3] else 2 if gm in [2,4] else 6 if gm in [0,6] else gm # group 1,3 and 2,4, 0,6
+          } for gm in gms
+        ] # key:genmatch
+      }, # category:genmatch
+      'content': {
+        'nodetype': 'category', # category:genmatch
+        'input': "genmatch",
+        #'default': 1.0, # no default: throw error if unrecognized genmatch
+        'content': [
+          { 'key': 1, 'value': fesdata },  # e  -> tau_h fake
+          { 'key': 2, 'value': mesdata },  # mu -> tau_h fake
+          #{ 'key': 3, 'value': fesdata }, # e  -> tau_h fake
+          #{ 'key': 4, 'value': mesdata }, # mu -> tau_h fake
+          { 'key': 5, 'value': tesdata },  # real tau_h
+          { 'key': 6, 'value': 1.0 },      # j  -> tau_h fake
+          #{ 'key': 0, 'value': 1.0 },     # j  -> tau_h fake
+        ]
+      } # category:genmatch
+    } # transform:genmatch
   })
   
-  if verb>1:
+  if verb>=2:
     print(JSONEncoder.dumps(corr))
-  elif verb>0:
+  elif verb>=1:
     print(corr)
   if fname:
     print(f">>> Writing {fname}...")
@@ -202,7 +232,7 @@ def makecorr_tes(tesvals=None,**kwargs):
 
 def evaluate(corrs):
   header("Evaluate")
-  cset_py, cset = wrap(corrs) # wrap to create C++ object that can be evaluated
+  cset    = wrap(corrs) # wrap to create C++ object that can be evaluated
   ptbins  = [10.,20.,30.,100.,170.,500.,2000.]
   etabins = [-2.0,-1.0,0.0,1.1,2.0,2.5,3.0]
   gms     = [0,1,2,3,4,5,6,7]

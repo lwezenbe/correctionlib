@@ -40,20 +40,21 @@ def maketid(sfs,ibin,syst='nom'):
 def makecorr_tid_pt(sfs=None,**kwargs):
   """Tau ID SF, pT-dependent."""
   verb    = kwargs.get('verb',0)
-  outdir  = kwargs.get('outdir',"data/tau")
+  tag     = kwargs.get('tag',"") # output tag for JSON file
+  outdir  = kwargs.get('outdir',"data/tau") # output directory for JSON file
   ptbins  = kwargs.get('bins',[20.,25.,30.,35.,40.,500.,1000.,2000.])
   if sfs:
     id    = kwargs.get('id',   "unkown")
     era   = kwargs.get('era',  "unkown")
     name  = kwargs.get('name', f"tau_sf_pt_{id}_{era}")
-    fname = kwargs.get('fname',f"{outdir}/{name}.json")
+    fname = kwargs.get('fname',f"{outdir}/{name}{tag}.json")
     info  = kwargs.get('info', f"pT-dependent SFs for {id} in {era}")
     wps   = list(sfs.keys())
   else: # test format with dummy values
     id    = kwargs.get('id',  "DeepTau2017v2p1VSjet")
     header(f"Dummy pT-dependent {id} SFs for test")
     name  = kwargs.get('name', f"test_{id}_pt")
-    fname = kwargs.get('fname',f"{outdir}/test_tau_pt.json")
+    fname = kwargs.get('fname',f"{outdir}/test_tau_pt{tag}.json")
     info  = kwargs.get('info', f"pT-dependent SFs for {id}")
     wps   = [
       #'VVVLoose', 'VVLoose', 'VLoose',
@@ -66,12 +67,12 @@ def makecorr_tid_pt(sfs=None,**kwargs):
   assert ptbins[-2]==1000., f"Second-to-last bin ({ptbins[-2]}) should be 1000!"
   assert ptbins[-1]>1000., f"Last bin ({ptbins[-1]}) should be larger than 1000!"
   wps.sort(key=wp_sortkey)
-  corr    = Correction.parse_obj({
+  corr    = schema.Correction.parse_obj({
     'version': 0,
-    'name':    "test_DeepTau2017v2p1VSjet_pt",
+    'name': name,
     'description': "pT-dependent SFs for DeepTau2017v2p1VSjet",
     'inputs': [
-      {'name': "pt",       'type': "real",   'description': "Reconstructed tau pt"},
+      {'name': "pt",       'type': "real",   'description': "Reconstructed tau pT"},
       {'name': "genmatch", 'type': "int",    'description': getgminfo()},
       {'name': "wp",       'type': "string", 'description': getwpinfo(id,wps)},
       {'name': "syst",     'type': "string", 'description': "Systematic 'nom', 'up', 'down'"},
@@ -118,9 +119,9 @@ def makecorr_tid_pt(sfs=None,**kwargs):
       ]
     } # category:genmatch
   })
-  if verb>1:
+  if verb>=2:
     print(JSONEncoder.dumps(corr))
-  elif verb>0:
+  elif verb>=1:
     print(corr)
   if fname:
     print(f">>> Writing {fname}...")
@@ -130,21 +131,23 @@ def makecorr_tid_pt(sfs=None,**kwargs):
 
 def makecorr_tid_dm(sfs=None,**kwargs):
   """Tau ID SF, DM-dependent."""
-  verb = kwargs.get('verb',0)
+  verb    = kwargs.get('verb',0)
+  tag     = kwargs.get('tag',"") # output tag for JSON file
+  outdir  = kwargs.get('outdir',"data/tau") # output directory for JSON file
   if sfs:
     id    = kwargs.get('id',   "unkown")
     era   = kwargs.get('era',  "unkown")
     name  = kwargs.get('name', f"tau_sf_dm_{id}_{era}")
-    fname = kwargs.get('fname',f"data/tau/{name}.json")
-    info  = kwargs.get('info', f"DM-dependent SFs for {id} in {era}")
+    fname = kwargs.get('fname',f"{outdir}/{name}{tag}.json")
+    info  = kwargs.get('info', f"DM-dependent SFs for {id} in {era} with tau_h pT > 40 GeV")
     wps   = list(sfs.keys())
     dms   = list(sfs[wps[0]].keys()) # get list of DMs from first WP
   else: # test format with dummy values
     id    = kwargs.get('id',  "DeepTau2017v2p1VSjet")
     header(f"Dummy DM-dependent {id} SFs for test")
     name  = kwargs.get('name', f"test_{id}_dm")
-    fname = kwargs.get('fname',f"data/tau/test_tau_dm.json")
-    info  = kwargs.get('info', f"DM-dependent SFs for {id}")
+    fname = kwargs.get('fname',f"{outdir}/test_tau_dm{tag}.json")
+    info  = kwargs.get('info', f"DM-dependent SFs for {id} with tau_h pT > 40 GeV")
     wps   = [
       #'VVVLoose', 'VVLoose', 'VLoose',
       'Loose', 'Medium', 'Tight',
@@ -155,12 +158,12 @@ def makecorr_tid_dm(sfs=None,**kwargs):
     sfs   = {wp: {dm: (1.,0.2,0.2) for dm in dms} for wp in wps}
   wps.sort(key=wp_sortkey)
   dms.sort()
-  corr    = Correction.parse_obj({
+  corr    = schema.Correction.parse_obj({
     'version': 0,
     'name': name,
     'description': info,
     'inputs': [
-      #{'name': "pt",       'type': "real",   'description': "tau pt"},
+      #{'name': "pt",       'type': "real",   'description': "Reconstructed tau pT"},
       {'name': "dm",       'type': "int",    'description': getdminfo(dms)},
       {'name': "genmatch", 'type': "int",    'description': getgminfo()},
       {'name': "wp",       'type': "string", 'description': getwpinfo(id,wps)},
@@ -210,9 +213,9 @@ def makecorr_tid_dm(sfs=None,**kwargs):
       ]
     } # category:genmatch
   })
-  if verb>1:
+  if verb>=2:
     print(JSONEncoder.dumps(corr))
-  elif verb>0:
+  elif verb>=1:
     print(corr)
   if fname:
     print(f">>> Writing {fname}...")
@@ -222,10 +225,10 @@ def makecorr_tid_dm(sfs=None,**kwargs):
 
 def evaluate(corrs):
   header("Evaluate")
-  cset_py, cset = wrap(corrs) # wrap to create C++ object that can be evaluated
-  dms = [-1,0,1,2,5,10,11]
-  gms = [0,1,2,3,4,5,6,7]
-  pts = [10.,21.,26.,31.,36.,41.,501.,750.,999.,2000.]
+  cset = wrap(corrs) # wrap to create C++ object that can be evaluated
+  dms  = [-1,0,1,2,5,10,11]
+  gms  = [0,1,2,3,4,5,6,7]
+  pts  = [10.,21.,26.,31.,36.,41.,501.,750.,999.,2000.]
   for name in list(cset):
     corr = cset[name]
     print(f">>>\n>>> {name}: {corr.description}")
