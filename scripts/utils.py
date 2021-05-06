@@ -14,6 +14,7 @@ import correctionlib.schemav2 as schema
 import correctionlib.JSONEncoder as JSONEncoder
 #from correctionlib.schemav2 import Correction, CorrectionSet
 import json, jsonschema
+import gzip
 from ROOT import TFile
 
 
@@ -152,16 +153,22 @@ def eval2str(oldmeth,newtool,args1,args2):
   
 
 def readjson(fname,rename=None,verb=0):
-  """Read & validate JSPM."""
+  """Read & validate JSON."""
   print(f">>> Opening {fname}...")
+  if not os.path.isfile(fname):
+    print(warn(f'Could not find JSON file {fname}...'))
   #corr = schema.Correction.parse_file(fname)
-  with open(fname) as file:
-    data = json.load(file)
-    clss = schema.Correction if 'data' in data else schema.CorrectionSet
-    out  = jsonschema.validate(data,clss.schema())
-    if rename!=None and 'name' in data:
-      data['name'] = rename # rename
-    corr = clss.parse_obj(data)
+  if fname.endswith(".json.gz"):
+    with gzip.open(fname,'rt') as file:
+      data = json.load(file)
+  else:
+    with open(fname) as file:
+      data = json.load(file)
+  clss = schema.Correction if 'data' in data else schema.CorrectionSet
+  out  = jsonschema.validate(data,clss.schema())
+  if rename!=None and 'name' in data:
+    data['name'] = rename # rename
+  corr = clss.parse_obj(data)
   if verb>=2:
     print(JSONEncoder.dumps(corr))
   elif verb>=1:

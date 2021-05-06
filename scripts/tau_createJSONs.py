@@ -10,7 +10,7 @@ import os, sys
 from math import sqrt
 from tau_tid import makecorr_tid_dm, makecorr_tid_pt
 from tau_ltf import makecorr_ltf
-from tau_tes import makecorr_tes
+from tau_tes import makecorr_tes, makecorr_tes_id
 from utils import *
 _prec = 7 # precision
 
@@ -64,7 +64,7 @@ SF1 = SF(1,0) # default 1 +- 0
 def main(args):
   
   global _prec
-  outdir    = ensuredir("data/tau/new") #"../data"
+  outdir    = ensuredir(args.outdir) #"../data"
   tag       = args.tag # output tag for JSON file
   verbosity = args.verbosity
   tidfilter = args.tidfilter or ([ # only run these tau IDs
@@ -183,6 +183,7 @@ def main(args):
     },
   }
   
+  # CREATE JSON
   antiEleEtaBins = ( 0.0, 1.460, 1.558, 2.3 )
   antiMuEtaBins  = ( 0.0, 0.4, 0.8, 1.2, 1.7, 2.3 )
   for id in antiLepSFs:
@@ -262,37 +263,66 @@ def main(args):
   }
   tesvals['ele']['MVAoldDM2017v2'] = tesvals['ele']['DeepTau2017v2p1'] # reuse DeepTau2017v2p1 ESs for MVAoldDM2017v2
   
+  # CREATE JSON
   ptbins  = (0.,34.,170.)
   etabins = (0.,1.5,2.5)
-  tesids  = tesvals['low'].keys()
-  for id in tesids:
-    if id not in tesfilter: continue
-    assert id in tesvals['high'], f"Did not find {id} for high-pT tau energy scale!"
-    assert id in tesvals['ele'],  f"Did not find {id} for electron fake tau energy scale!"
-    teseras = tesvals['low'][id].keys()
-    for era in teseras:
+  tesids  = [id for id in tesvals['low'].keys()]
+  teseras = [e for e in tesvals['low'][tesids[0]].keys()]
+  for era in teseras:
+    if era not in erafilter: continue
+    tesvals_ = { } # swap order: era -> id -> type -> dm (-> eta bin)
+    for id in tesids:
+      if id not in tesfilter: continue
       assert era in tesvals['high'][id], f"Did not find {era} for {id} high-pT tau energy scale!"
       assert era in tesvals['ele'][id],  f"Did not find {era} for {id} electron fake tau energy scale!"
-      if era not in erafilter: continue
-      tesvals_ = {
+      tesvals_[id] = {
         'low':  tesvals['low'][id][era],
         'high': tesvals['high'][id][era],
         'ele':  tesvals['ele'][id][era],
       }
-      for key in tesvals_:
-        reusesf(tesvals_[key], 1, 2) # reuse DM1 for DM2
-        reusesf(tesvals_[key],10,11) # reuse DM10 for DM11 (if DM10 exists)
-      if verbosity>0:
-        print(f">>> tesvals={tesvals_}")
-      corr = makecorr_tes(tesvals_,id=id,era=era,ptbins=ptbins,etabins=etabins,
-                          outdir=outdir,tag=tag,verb=verbosity)
+      for key in tesvals_[id]:
+        reusesf(tesvals_[id][key], 1, 2) # reuse DM1 for DM2
+        reusesf(tesvals_[id][key],10,11) # reuse DM10 for DM11 (if DM10 exists)
+    if verbosity>=1:
+      print(">>> tesvals={")
+      for id in tesvals_:
+        print(f">>>   '{id}': {{")
+        for key in tesvals_[id]:
+          print(f">>>     '{key}': {tesvals_[id][key]}")
+        print(">>>   }")
+      print(">>> }")
+    corr = makecorr_tes(tesvals_,era=era,ptbins=ptbins,etabins=etabins,
+                        outdir=outdir,tag=tag,verb=verbosity)
+  ###tesids  = tesvals['low'].keys()
+  ###for id in tesids:
+  ###  if id not in tesfilter: continue
+  ###  assert id in tesvals['high'], f"Did not find {id} for high-pT tau energy scale!"
+  ###  assert id in tesvals['ele'],  f"Did not find {id} for electron fake tau energy scale!"
+  ###  teseras = tesvals['low'][id].keys()
+  ###  for era in teseras:
+  ###    assert era in tesvals['high'][id], f"Did not find {era} for {id} high-pT tau energy scale!"
+  ###    assert era in tesvals['ele'][id],  f"Did not find {era} for {id} electron fake tau energy scale!"
+  ###    if era not in erafilter: continue
+  ###    tesvals_ = { # swap order: id -> era -> type -> dm (-> eta bin)
+  ###      'low':  tesvals['low'][id][era],
+  ###      'high': tesvals['high'][id][era],
+  ###      'ele':  tesvals['ele'][id][era],
+  ###    }
+  ###    for key in tesvals_:
+  ###      reusesf(tesvals_[key], 1, 2) # reuse DM1 for DM2
+  ###      reusesf(tesvals_[key],10,11) # reuse DM10 for DM11 (if DM10 exists)
+  ###    if verbosity>0:
+  ###      print(f">>> tesvals={tesvals_}")
+  ###    corr = makecorr_tes_id(tesvals_,id=id,era=era,ptbins=ptbins,etabins=etabins,
+  ###                           outdir=outdir,tag=tag,verb=verbosity)
   
 
 if __name__ == '__main__':
   from argparse import ArgumentParser
   argv = sys.argv
   description = '''This script creates JSON files for hardcoded TauPOG scale factors.'''
-  parser = ArgumentParser(prog="tau/convert.py",description=description,epilog="Good luck!")
+  parser = ArgumentParser(prog="tau_createJSONs.py",description=description,epilog="Good luck!")
+  parser.add_argument('-o', '--outdir',   default="data/tau/new", help="output direcory for JSON file" )
   parser.add_argument('-t', '--tag',      default="", help="extra tag for JSON output file" )
   parser.add_argument('-I', '--tid',      dest='tidfilter', nargs='+', help="filter by tau ID" )
   parser.add_argument('-E', '--tes',      dest='tesfilter', nargs='+', help="filter by tau ES" )
