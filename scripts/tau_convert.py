@@ -9,7 +9,7 @@
 # Sources:
 #   https://github.com/cms-tau-pog/TauIDSFs/blob/master/utils/createSFFiles.py
 #   https://github.com/cms-nanoAOD/correctionlib/blob/master/tests/test_core.py
-import sys; sys.path.append('scripts')
+import sys
 from utils import *
 from tau_tid import makecorr_tid_dm, makecorr_tid_pt
 from tau_ltf import makecorr_ltf
@@ -27,11 +27,11 @@ rexp_tid  = re.compile(r"\(([^)&]+)(?:&&)?([^)&]*)\)\*([-+]*[\d.]+|\([^)]+\))") 
 
 def main(args):
   fnames    = args.fnames
+  outdir    = ensuredir(args.outdir)
   tag       = args.tag
   verbosity = args.verbosity
   prec      = 7 # precision of SFs
   lprec     = 5 # precision of l -> tau_h SFs
-  outdir    = ensuredir("data/tau/new")
   infiles   = {
     'jet': { }, # DM/pT-dependent DeepTauVSjet, MVAoldDM: era -> id -> jet/dm -> fname
     'mu':  { }, # eta-dependent DeepTauVSmu:              era -> id -> fname
@@ -41,7 +41,7 @@ def main(args):
   
   # CATEGORIZED
   if verbosity>0:
-    print(">>> categorize files...")
+    print(">>> Categorize files...")
   for fname in fnames:
     if not fname.lower().endswith(".root"):
       print(warn(f"{fname}: Not a ROOT file! Ignoring..."))
@@ -269,7 +269,8 @@ if __name__ == '__main__':
   from argparse import ArgumentParser
   argv = sys.argv
   description = '''This script creates ROOT files for hardcoded TauPOG scale factors.'''
-  parser = ArgumentParser(prog="tau/convert.py",description=description,epilog="Good luck!")
+  parser = ArgumentParser(prog="tau_convert.py",description=description,epilog="Good luck!")
+  parser.add_argument('-o', '--outdir',   default="data/tau/new", help="output direcory for JSON file" )
   parser.add_argument('fnames',           nargs='+', action='store', help="file names" )
   parser.add_argument('-t', '--tag',      help="extra tag for JSON output file" )
   parser.add_argument('-v', '--verbose',  dest='verbosity', type=int, nargs='?', const=1, default=0,
