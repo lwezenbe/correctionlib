@@ -154,7 +154,8 @@ def eval2str(oldmeth,newtool,args1,args2,largs2=tuple()):
 
 def readjson(fname,rename=None,verb=0):
   """Read & validate JSON."""
-  print(f">>> Opening {fname}...")
+  if verb>=1:
+    print(f">>> Opening {fname}...")
   if not os.path.isfile(fname):
     print(warn(f'Could not find JSON file {fname}...'))
   #corr = schema.Correction.parse_file(fname)
@@ -220,6 +221,8 @@ def ensureTFile(fname,**kwargs):
     file = TFile.Open(fname)
     if not file or file.IsZombie():
       print(warn(f'Could not open file {fname}...'))
+    elif verb>=1:
+      print(">>> Opening {fname}...")
   else:
     print(warn(f'Did not find file {fname}...'))
     return None
