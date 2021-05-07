@@ -11,7 +11,6 @@ Adapted from:
 import gzip
 import json
 import math
-import gzip
 from typing import Any, List, Type
 
 import pydantic
