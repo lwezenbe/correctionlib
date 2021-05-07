@@ -128,12 +128,12 @@ def marksf(sfs1,sfs2):
     str2 += "\033[0m"
   return str1, str2
 
-def eval2str(oldmeth,newtool,args1,args2):
+def eval2str(oldmeth,newtool,args1,args2,largs2=tuple()):
   sfold = oldmeth(args1) # down, nom, up
   sfnew = [ ]
   for syst in ['nom','up','down']:
     try:
-      sf = newtool.evaluate(*args2,syst)
+      sf = newtool.evaluate(*args2,syst,*largs2)
     except Exception as err:
       sf = None
     sfnew.append(sf)

@@ -11,7 +11,7 @@
 #   https://github.com/cms-nanoAOD/correctionlib/blob/master/tests/test_core.py
 import sys
 from utils import *
-from tau_tid import makecorr_tid_dm, makecorr_tid_pt
+from tau_tid import makecorr_tid, makecorr_tid_dm, makecorr_tid_pt
 from tau_ltf import makecorr_ltf
 from tau_tes import makecorr_tes
 import re
@@ -50,7 +50,6 @@ def main(args):
       print(warn(f"{fname}: Ignoring embedded SFs for now..."))
       continue
     match = rexp_fjet.match(fname)
-    print(0,fname)
     if match:
       param, id, era, tag = match.groups()
       if param=='pt': #fname.startswith("TauID_SF_pt_"):
@@ -91,6 +90,8 @@ def main(args):
   # TAU ANTI-JET SFs
   for era in infiles['jet']:
     for id in infiles['jet'][era]:
+      ptsfs = None
+      dmsfs = None
       if 'dm' in infiles['jet'][era][id]: # DM-dependent
         header(f"DM-dependent {id} SFs in {era}")
         print(f">>>   {fname}")
@@ -114,10 +115,11 @@ def main(args):
           reusesf(sfs[wp], 1, 2) # reuse DM1 for DM2
           reusesf(sfs[wp],10,11) # reuse DM10 for DM11
         file.Close()
-        if verbosity>0:
+        if verbosity>=1:
           print(JSONEncoder.dumps(sfs))
+        dmsfs = sfs
         corr = makecorr_tid_dm(sfs,id=id,era=era,
-                               outdir=outdir,verb=verbosity)
+                               outdir=outdir,verb=verbosity-1)
       if 'pt' in infiles['jet'][era][id]: # pT-dependent
         fname = infiles['jet'][era][id]['pt']
         header(f"pT-dependent {id} SFs in {era}")
@@ -139,7 +141,7 @@ def main(args):
           ptbins  = [ ]
           sfs[wp] = [ ]
           xmax    = -1
-          if verbosity>0:
+          if verbosity>=1:
             print(">>> WP=%r"%(wpnom))
             print(">>>   fnom  = %r"%(fnom))
             print(">>>   fup   = %r"%(fup))
@@ -172,12 +174,16 @@ def main(args):
           ptbins += [500.,1000.,2000.]
           sfs[wp].append(sfs[wp][-1]) #  500 < pt < 1000
           sfs[wp].append(sfs[wp][-1]) # 1000 < pt < 2000
-        if verbosity>0:
+        file.Close()
+        if verbosity>=1:
           print(f">>> ptbins={ptbins}")
           print(JSONEncoder.dumps(sfs))
+        ptsfs = sfs
         corr = makecorr_tid_pt(sfs,id=id,era=era,
-                               outdir=outdir,tag=tag,verb=verbosity)
-        file.Close()
+                               outdir=outdir,tag=tag,verb=verbosity-1)
+        if ptsfs and dmsfs:
+          corr = makecorr_tid(ptsfs,dmsfs,id=id,era=era,
+                              outdir=outdir,tag=tag,verb=verbosity-1)
   
   # TAU ANTI-ELECTRON/MUON SFs
   for ltype in ['e','mu']:

@@ -11,20 +11,21 @@ import sys; sys.path.append('scripts')
 from utils import *
 
 
-def maketid(sfs,ibin,syst='nom'):
+def maketid(sfs,pt,syst='nom'):
   """Interpolate for second to last bin."""
   # f = TFormula('f',sf)
   # for x in [10,20,29,30,31,35,45,100,200,499,500,501,750,999,1000,1001,1500,2000]: x, f.Eval(x)
   # "x<20?0: x<25?1.00: x<30?1.01: x<35?1.02: x<40?1.03: 1.04"
   # "x<20?0: x<25?1.10: x<30?1.11: x<35?1.12: x<40?1.13: x<500?1.14: x<1000?1.04+0.2*x/500.: 1.44"
   # "x<20?0: x<25?0.90: x<30?0.91: x<35?0.92: x<40?0.93: x<500?0.94: x<1000?1.04-0.2*x/500.: 0.64"
+  #print(sfs,pt,syst)
   if syst=='nom':
     sf = sfs[0]
   else:
     sfnom, sfup, sfdown = sfs
-    if ibin<5: # pt < 500
+    if pt<500: # pt < 500
       sf = sfnom-sfdown if syst=='down' else sfnom+sfup
-    elif ibin==5: # 500 < pt < 1000
+    elif 500<=pt<1000: # 500 < pt < 1000
       sf = "%.6g-%.6g*x"%(sfnom,sfdown/500.) if syst=='down' else "%.6g+%.6g*x"%(sfnom,sfup/500.)
       sf = { # linearly inflate uncertainty x2
         'nodetype': 'formula', # pT-dependent
@@ -35,6 +36,172 @@ def maketid(sfs,ibin,syst='nom'):
     else: # pt > 1000
       sf = sfnom-2*sfdown if syst=='down' else sfnom+2*sfup # inflate uncertainty x2
   return sf
+  
+
+def maketiddata_pt(sfs,ptbins,wps):
+  """Construct tau energy scale data block."""
+  tiddata = schema.Category.parse_obj({ # category:genmatch -> category:wp -> binning:eta -> category:syst
+    'nodetype': 'category', # category:genmatch
+    'input': "genmatch",
+    #'default': 1.0, # no default: throw error if unrecognized genmatch
+    'content': [
+      { 'key': 0, 'value': 1.0 }, # j  -> tau_h fake
+      { 'key': 1, 'value': 1.0 }, # e  -> tau_h fake
+      { 'key': 2, 'value': 1.0 }, # mu -> tau_h fake
+      { 'key': 3, 'value': 1.0 }, # e  -> tau_h fake
+      { 'key': 4, 'value': 1.0 }, # mu -> tau_h fake
+      { 'key': 5,  # real tau_h
+        'value': {
+          'nodetype': 'category', # category:wp
+          'input': "wp",
+          #'default': 1.0, # no default: throw error if unrecognized WP
+          'content': [ # key:wp
+            { 'key': wp,
+              'value': {
+                'nodetype': 'binning', # binning:pt
+                'input': "pt",
+                'edges': ptbins,
+                'flow': "clamp",
+                'content': [ # bin:pt
+                  { 'nodetype': 'category', # syst
+                    'input': "syst",
+                    'content': [
+                      { 'key': 'nom',  'value': maketid(sf,pt,'nom')  },
+                      { 'key': 'up',   'value': maketid(sf,pt,'up')   },
+                      { 'key': 'down', 'value': maketid(sf,pt,'down') },
+                    ]
+                  } for pt, sf in zip(ptbins,sfs[wp]) # loop over pT bins
+                ] # bin:pt
+              } # binning:pt
+            } for wp in wps
+          ] # key:wp
+        } # category:wp
+      },
+      { 'key': 6, 'value': 1.0 }, # j  -> tau_h fake
+    ]
+  }) # category:genmatch
+  return tiddata
+  
+
+def maketiddata_dm(sfs,dms,wps):
+  """Construct tau energy scale data block."""
+  tiddata = schema.Category.parse_obj({ # category:genmatch -> category:wp -> category:dm -> category:syst
+    'nodetype': 'category', # category:genmatch
+    'input': "genmatch",
+    #'default': 1.0, # no default: throw error if unrecognized genmatch
+    'content': [
+      { 'key': 1, 'value': 1.0 }, # e  -> tau_h fake
+      { 'key': 2, 'value': 1.0 }, # mu -> tau_h fake
+      { 'key': 3, 'value': 1.0 }, # e  -> tau_h fake
+      { 'key': 4, 'value': 1.0 }, # mu -> tau_h fake
+      { 'key': 5,  # real tau_h
+        'value': {
+          'nodetype': 'category', # category:wp
+          'input': "wp",
+          #'default': 1.0, # no default: throw error if unrecognized WP
+          'content': [ # key:wp
+            { 'key': wp,
+              'value': {
+                'nodetype': 'category', # category:dm
+                'input': "dm",
+                #'default': 1.0, # no default: throw error if unsupported DM
+                'content': [ # key:dm
+                  { 'key': dm,
+                    'value': {
+                      'nodetype': 'category', # syst
+                      'input': "syst",
+                      'content': [
+                        { 'key': 'nom',  'value': sfs[wp][dm][0] },
+                        { 'key': 'up',   'value': sfs[wp][dm][1] },
+                        { 'key': 'down', 'value': sfs[wp][dm][2] },
+                      ]
+                    }
+                  } for dm in dms
+                ] # key:dm
+              } # category:dm
+            } for wp in wps
+          ] # key:wp
+        } # category:wp
+      },
+      { 'key': 6, 'value': 1.0 }, # j  -> tau_h fake
+      { 'key': 0, 'value': 1.0 }, # j  -> tau_h fake
+    ]
+  }) # category:genmatch
+  return tiddata
+  
+
+def makecorr_tid(ptsfs=None,dmsfs=None,**kwargs):
+  """Tau ID SF, pT-dependent."""
+  verb    = kwargs.get('verb',0)
+  tag     = kwargs.get('tag',"") # output tag for JSON file
+  outdir  = kwargs.get('outdir',"data/tau") # output directory for JSON file
+  dms     = [0,1,2,10,11]
+  ptbins  = kwargs.get('bins',[20.,25.,30.,35.,40.,500.,1000.,2000.])
+  if ptsfs and dmsfs:
+    id    = kwargs.get('id',   "unkown")
+    era   = kwargs.get('era',  "unkown")
+    name  = kwargs.get('name', f"tau_sf_pt-dm_{id}_{era}")
+    fname = kwargs.get('fname',f"{outdir}/{name}{tag}.json")
+    info  = kwargs.get('info', f"{id} SFs in {era}")
+    ptwps = list(ptsfs.keys())
+    dmwps = list(dmsfs.keys())
+    print(dmsfs,dmwps)
+    dms   = list(dmsfs[dmwps[0]].keys()) # get list of DMs from first WP
+  else: # test format with dummy values
+    id    = kwargs.get('id',  "DeepTau2017v2p1VSjet")
+    header(f"Dummy {id} SFs for test")
+    name  = kwargs.get('name', f"test_{id}_pt-dm")
+    fname = kwargs.get('fname',f"{outdir}/test_tau_pt-dm{tag}.json")
+    info  = kwargs.get('info', f"{id} SFs")
+    ptwps = [
+      #'VVVLoose', 'VVLoose', 'VLoose',
+      'Loose', 'Medium', 'Tight',
+      #'VTight', 'VVTight'
+    ]
+    dmwps = ptwps
+    ptsfs = {wp: [(1.,0.2,0.2) for i in range(len(ptbins)-1)] for wp in wps}
+    dmsfs = {wp: {dm: (1.,0.2,0.2) for dm in dms} for wp in wps}
+  assert all(len(ptsfs[w])==len(ptbins)-1 for w in ptsfs), f"Number of SFs ({sfs}) does not match ({len(ptbins)-1})!"
+  assert ptbins[-3]==500.,  f"Third-to-last bin ({ptbins[-3]}) should be 500!"
+  assert ptbins[-2]==1000., f"Second-to-last bin ({ptbins[-2]}) should be 1000!"
+  assert ptbins[-1]>1000.,  f"Last bin ({ptbins[-1]}) should be larger than 1000!"
+  ptwps.sort(key=wp_sortkey)
+  dmwps.sort(key=wp_sortkey)
+  dms.sort()
+  wps = ptwps if len(ptwps)>=len(dmwps) else dmwps
+  corr = schema.Correction.parse_obj({
+    'version': 0,
+    'name': name,
+    'description': "{id} SFs: By default, use the pT-dependent SFs with the 'pt' flag. "+\
+                   "For analyses with the ditau triggers with offline pT > 40 GeV, "+\
+                   "use the DM-dependent SFs with flag 'dm'.",
+    'inputs': [
+      {'name': "pt",       'type': "real",   'description': "Reconstructed tau pT"},
+      {'name': "dm",       'type': "int",    'description': getdminfo(dms)},
+      {'name': "genmatch", 'type': "int",    'description': getgminfo()},
+      {'name': "wp",       'type': "string", 'description': getwpinfo(id,wps)},
+      {'name': "syst",     'type': "string", 'description': "Systematic 'nom', 'up', 'down'"},
+      {'name': "flag",     'type': "string", 'description': "Flag: 'pt' = pT-dependent SFs, 'dm' = DM-dependent SFs (pT > 40 GeV)"},
+    ],
+    'output': {'name': "weight", 'type': "real"},
+    'data': schema.Category.parse_obj({ # category:genmatch -> category:wp -> category:dm -> category:syst
+      'nodetype': 'category', # category:genmatch
+      'input': "flag",
+      #'default': 1.0, # no default: throw error if unrecognized genmatch
+      'content': [
+        { 'key': 'pt', 'value': maketiddata_pt(ptsfs,ptbins,ptwps) },
+        { 'key': 'dm', 'value': maketiddata_dm(dmsfs,dms,dmwps) },
+      ],
+    })
+  })
+  if verb>=2:
+    print(JSONEncoder.dumps(corr))
+  elif verb>=1:
+    print(corr)
+  if fname:
+    print(f">>> Writing {fname}...")
+    JSONEncoder.write(corr,fname)
+  return corr
   
 
 def makecorr_tid_pt(sfs=None,**kwargs):
@@ -78,46 +245,7 @@ def makecorr_tid_pt(sfs=None,**kwargs):
       {'name': "syst",     'type': "string", 'description': "Systematic 'nom', 'up', 'down'"},
     ],
     'output': {'name': "weight", 'type': "real"},
-    'data': { # category:genmatch -> category:wp -> binning:eta -> category:syst
-      'nodetype': 'category', # category:genmatch
-      'input': "genmatch",
-      #'default': 1.0, # no default: throw error if unrecognized genmatch
-      'content': [
-        { 'key': 0, 'value': 1.0 }, # j  -> tau_h fake
-        { 'key': 1, 'value': 1.0 }, # e  -> tau_h fake
-        { 'key': 2, 'value': 1.0 }, # mu -> tau_h fake
-        { 'key': 3, 'value': 1.0 }, # e  -> tau_h fake
-        { 'key': 4, 'value': 1.0 }, # mu -> tau_h fake
-        { 'key': 5,  # real tau_h
-          'value': {
-            'nodetype': 'category', # category:wp
-            'input': "wp",
-            #'default': 1.0, # no default: throw error if unrecognized WP
-            'content': [ # key:wp
-              { 'key': wp,
-                'value': {
-                  'nodetype': 'binning', # binning:pt
-                  'input': "pt",
-                  'edges': ptbins,
-                  'flow': "clamp",
-                  'content': [ # bin:pt
-                    { 'nodetype': 'category', # syst
-                      'input': "syst",
-                      'content': [
-                        { 'key': 'nom',  'value': maketid(sf,i,'nom')  },
-                        { 'key': 'up',   'value': maketid(sf,i,'up')   },
-                        { 'key': 'down', 'value': maketid(sf,i,'down') },
-                      ]
-                    } for i, sf in enumerate(sfs[wp]) # loop over pT bins
-                  ] # bin:pt
-                } # binning:pt
-              } for wp in wps
-            ] # key:wp
-          } # category:wp
-        },
-        { 'key': 6, 'value': 1.0 }, # j  -> tau_h fake
-      ]
-    } # category:genmatch
+    'data': maketiddata_pt(sfs,ptbins,wps)
   })
   if verb>=2:
     print(JSONEncoder.dumps(corr))
@@ -154,11 +282,10 @@ def makecorr_tid_dm(sfs=None,**kwargs):
       #'VTight', 'VVTight'
     ]
     dms   = [0,1,2,10,11]
-    ndms  = len(dms)
     sfs   = {wp: {dm: (1.,0.2,0.2) for dm in dms} for wp in wps}
   wps.sort(key=wp_sortkey)
   dms.sort()
-  corr    = schema.Correction.parse_obj({
+  corr = schema.Correction.parse_obj({
     'version': 0,
     'name': name,
     'description': info,
@@ -170,48 +297,7 @@ def makecorr_tid_dm(sfs=None,**kwargs):
       {'name': "syst",     'type': "string", 'description': getsystinfo()},
     ],
     'output': {'name': "weight", 'type': "real"},
-    'data': { # category:genmatch -> category:wp -> category:dm -> category:syst
-      'nodetype': 'category', # category:genmatch
-      'input': "genmatch",
-      #'default': 1.0, # no default: throw error if unrecognized genmatch
-      'content': [
-        { 'key': 1, 'value': 1.0 }, # e  -> tau_h fake
-        { 'key': 2, 'value': 1.0 }, # mu -> tau_h fake
-        { 'key': 3, 'value': 1.0 }, # e  -> tau_h fake
-        { 'key': 4, 'value': 1.0 }, # mu -> tau_h fake
-        { 'key': 5,  # real tau_h
-          'value': {
-            'nodetype': 'category', # category:wp
-            'input': "wp",
-            #'default': 1.0, # no default: throw error if unrecognized WP
-            'content': [ # key:wp
-              { 'key': wp,
-                'value': {
-                  'nodetype': 'category', # category:dm
-                  'input': "dm",
-                  #'default': 1.0, # no default: throw error if unsupported DM
-                  'content': [ # key:dm
-                    { 'key': dm,
-                      'value': {
-                        'nodetype': 'category', # syst
-                        'input': "syst",
-                        'content': [
-                          { 'key': 'nom',  'value': sfs[wp][dm][0] },
-                          { 'key': 'up',   'value': sfs[wp][dm][1] },
-                          { 'key': 'down', 'value': sfs[wp][dm][2] },
-                        ]
-                      }
-                    } for dm in dms
-                  ] # key:dm
-                } # category:dm
-              } for wp in wps
-            ] # key:wp
-          } # category:wp
-        },
-        { 'key': 6, 'value': 1.0 }, # j  -> tau_h fake
-        { 'key': 0, 'value': 1.0 }, # j  -> tau_h fake
-      ]
-    } # category:genmatch
+    'data': maketiddata_dm(sfs,dms,wps)
   })
   if verb>=2:
     print(JSONEncoder.dumps(corr))
