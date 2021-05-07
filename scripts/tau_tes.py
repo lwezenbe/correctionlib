@@ -200,7 +200,7 @@ def makecorr_tes(tesvals=None,**kwargs):
     ptbins  = kwargs.get('ptbins',ptbins)
     etabins = kwargs.get('etabins',etabins)
     ids     = list(tesvals.keys())
-    dms     = sorted(list({dm for id in tesvals for dm in tesvals[id]['low'].keys()})) # get largest possible DM list
+    dms     = sorted(list({dm for id in tesvals for dm in tesvals[id]['low']})) # get largest possible DM list
   else: # test format with dummy values
     header(f"Tau energy scale for {era}")
     name    = kwargs.get('name', f"test_dm")

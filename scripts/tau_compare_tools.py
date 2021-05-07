@@ -63,7 +63,8 @@ def compare_es(id,era,dms=None,gms=None,tag="",verb=0):
 def compare_sfs(id,era,xvar='pt',dms=None,gms=None,wps=None,tag="",verb=0):
   """Compare old (ROOT) vs. new (JSON) SFs."""
   header(f"Compare {id} SF tools")
-  jname   = f"data/tau/new/tau_sf_{xvar}_{id}_{era}{tag}.json"
+  #jname   = f"data/tau/new/tau_sf_{xvar}_{id}_{era}{tag}.json"
+  jname   = f"data/tau/new/tau_sf_pt-dm_{id}_{era}{tag}.json"
   cset    = loadeval(jname,rename=id,verb=verb) # wrap to create C++ object that can be evaluated
   assert id in cset, "Did not find ID {id} in cset!"
   newtool = cset[id]
@@ -97,9 +98,14 @@ def compare_sfs(id,era,xvar='pt',dms=None,gms=None,wps=None,tag="",verb=0):
       row1 = ">>> %3d"%(gm)
       row2 = ">>> "+3*" "
       for x in xbins:
-        args1 = (45.,x,gm,'All') if 'dm' in xvar else (x,gm,'All')
-        args2 = (x,gm,wp)
-        str1, str2 = eval2str(oldmeth,newtool,args1,args2)
+        if 'pt' in xvar:
+          args1  = (x,gm,'All')
+          args2  = (x,-1,gm,wp) # (pt,dm,gm,wp,syst,flag)
+        else:
+          args1  = (45.,x,gm,'All')
+          args2  = (45.,x,gm,wp) # (pt,dm,gm,wp,syst,flag)
+        largs2 = (xvar,) # last arguments (after syst)
+        str1, str2 = eval2str(oldmeth,newtool,args1,args2,largs2)
         row1 += str1
         row2 += str2
       print(row1)
