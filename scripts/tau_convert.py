@@ -118,8 +118,8 @@ def main(args):
         if verbosity>=1:
           print(JSONEncoder.dumps(sfs))
         dmsfs = sfs
-        corr = makecorr_tid_dm(sfs,id=id,era=era,
-                               outdir=outdir,verb=verbosity-1)
+        ###corr = makecorr_tid_dm(sfs,id=id,era=era,
+        ###                       outdir=outdir,verb=verbosity-1)
       if 'pt' in infiles['jet'][era][id]: # pT-dependent
         fname = infiles['jet'][era][id]['pt']
         header(f"pT-dependent {id} SFs in {era}")
@@ -179,11 +179,14 @@ def main(args):
           print(f">>> ptbins={ptbins}")
           print(JSONEncoder.dumps(sfs))
         ptsfs = sfs
-        corr = makecorr_tid_pt(sfs,id=id,era=era,
-                               outdir=outdir,tag=tag,verb=verbosity-1)
+        ###corr = makecorr_tid_pt(sfs,id=id,era=era,
+        ###                       outdir=outdir,tag=tag,verb=verbosity-1)
         if ptsfs and dmsfs:
           corr = makecorr_tid(ptsfs,dmsfs,id=id,era=era,
                               outdir=outdir,tag=tag,verb=verbosity-1)
+        else:
+          xvar = "%s-dependent"%('DM' if ptsfs else 'pT')
+          print(">>> Could not make {id} SFs for {era}: Did not find {xvar} SF file...")
   
   # TAU ANTI-ELECTRON/MUON SFs
   for ltype in ['e','mu']:

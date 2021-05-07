@@ -172,7 +172,7 @@ def makecorr_tid(ptsfs=None,dmsfs=None,**kwargs):
   corr = schema.Correction.parse_obj({
     'version': 0,
     'name': name,
-    'description': "{id} SFs: By default, use the pT-dependent SFs with the 'pt' flag. "+\
+    'description': f"{id} SFs: By default, use the pT-dependent SFs with the 'pt' flag. "+\
                    "For analyses with the ditau triggers with offline pT > 40 GeV, "+\
                    "use the DM-dependent SFs with flag 'dm'.",
     'inputs': [

@@ -93,7 +93,7 @@ def makecorr_ltf(sfs=None,**kwargs):
   corr  = schema.Correction.parse_obj({
     'version': 0,
     'name': name,
-    'description': f"{ltype} -> tau_h fake rate SFs for DeepTau2017v2p1VS{ltype}",
+    'description': f"{ltype} -> tau_h fake rate SFs for {id}",
     'inputs': [
       {'name': "eta",      'type': "real",   'description': "Reconstructed tau eta"},
       {'name': "genmatch", 'type': "int",    'description': getgminfo()},

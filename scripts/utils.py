@@ -75,6 +75,10 @@ def header(string):
   print("\n>>> \033[1m\033[4m%s\033[0m"%(string))
   
 
+def green(string,**kwargs):
+  return "\033[32m%s\033[0m"%string
+  
+
 def warn(string):
   return ">>> "+f"\033[33m{string}\033[0m"
   
@@ -152,7 +156,7 @@ def eval2str(oldmeth,newtool,args1,args2,largs2=tuple()):
   return str1, str2
   
 
-def readjson(fname,rename=None,verb=0):
+def readjson(fname,rename=None,validate=True,verb=0):
   """Read & validate JSON."""
   if verb>=1:
     print(f">>> Opening {fname}...")
@@ -166,7 +170,8 @@ def readjson(fname,rename=None,verb=0):
     with open(fname) as file:
       data = json.load(file)
   clss = schema.Correction if 'data' in data else schema.CorrectionSet
-  out  = jsonschema.validate(data,clss.schema())
+  if validate:
+    out = jsonschema.validate(data,clss.schema())
   if rename!=None and 'name' in data:
     data['name'] = rename # rename
   corr = clss.parse_obj(data)
@@ -221,7 +226,7 @@ def ensureTFile(fname,**kwargs):
     file = TFile.Open(fname)
     if not file or file.IsZombie():
       print(warn(f'Could not open file {fname}...'))
-    elif verb>=1:
+    elif verbosity>=1:
       print(">>> Opening {fname}...")
   else:
     print(warn(f'Did not find file {fname}...'))

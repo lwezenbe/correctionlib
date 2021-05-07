@@ -6,8 +6,9 @@
 #   https://gitlab.cern.ch/cms-tau-pog/jsonpog-integration
 # Instructions:
 #   scp ineuteli@lxplus.cern.ch:/afs/cern.ch/work/l/lwezenbe/public/TriggerSFs/JSON/*json data/tau/new/
-#   scripts/tau_combine.py
+#   scripts/tau_combine.py -y 2018ReReco
 #   scripts/tau_combine.py a=DeepTauVSmu.json b=DeepTauVSjet.json
+#   scp data/tau/new/*2017* ineuteli@lxplus.cern.ch:/eos/cms/store/group/phys_tau/JSONPOG/POG/TAU/2017_ReReco/
 import os, sys
 import glob
 import re
@@ -27,6 +28,7 @@ def main(args):
   tag       = args.tag # output tag for JSON file
   eras      = args.eras # eras
   zip       = args.zip
+  validate  = args.validate
   verbosity = args.verbosity
   
   if finnames:
@@ -49,13 +51,14 @@ def main(args):
       print(">>> Please specify an era you would like to combine, e.g. scripts/tau_combine.py -y 2018ReReco")
     for era in eras:
       header(f"Corrections for {era}")
-      info     = "Correction for simulated tau object, as recommended by the TauPOG for {era}; "+\
+      info     = f"Correction for simulated tau object, as recommended by the TauPOG for {era}; "+\
                  "tau identification efficiency and fake rate scale factors$IDS, "+\
                  "tau energy scale, and tau trigger scale factors. "+\
                  "For more info, please visit https://twiki.cern.ch/twiki/bin/viewauth/CMS/TauIDRecommendationForRun2"+\
                  " (This file was created on %s)"%(today)
       foutname = outexp.replace('$ERA','_'+era).replace('$TAG',tag) # output JSON
-      finnames = glob.glob(f"data/tau/new/*{era}{tag}.json")+glob.glob(f"data/tau/new/*{era}{tag}.json.gz")
+      finname  = f"data/tau/new/*{era}{tag}.json"
+      finnames = glob.glob(finname)+glob.glob(finname+".gz")
       finexp   = re.compile(r"tau_sf_(pt-dm|eta)_([a-zA-Z0-9]+)_%s%s\.json"%(era,tag))
       corrs    = [ ]
       esfname  = None
@@ -80,16 +83,19 @@ def main(args):
         name = id
         if xvar=='dm':
           rename += "_dm" # DM-dependent VSjet ID
-        print(">>> Adding %s: %s..."%(name,fname))
-        corr = readjson(fname,rename=name,verb=verbosity)
+        print(f">>> Adding {green(name)}: {fname}...")
+        corr = readjson(fname,rename=name,validate=validate,verb=verbosity)
         corrs.append(corr)
         added.append(fname)
         ids.append(id)
       for fname, name in [(esfname,"tau_energy_scale"),(trgfname,"tau_trigger")]: # add to the end
         if not fname: continue
-        print(">>> Adding %s: %s..."%(name,fname))
-        corr = readjson(fname,rename=name,verb=verbosity)
+        print(f">>> Adding {green(name)}: {fname}...")
+        corr = readjson(fname,rename=name,validate=validate,verb=verbosity)
         corrs.append(corr)
+      if not corrs:
+        print(warn("Did not find any valid JSON files {finname}..."))
+        continue
       info = info.replace('$IDS'," (%s)"%(', '.join(sorted(ids))))
       print(f">>> Creating CorrectionSet...")
       cset = schema.CorrectionSet(schema_version=schema.VERSION,description=info,corrections=corrs)
@@ -113,6 +119,7 @@ if __name__ == '__main__':
   #parser.add_argument('-E', '--tes',      dest='tes', nargs='+', help="tau ES" )
   parser.add_argument('-y', '--era',      dest='eras', default=[ ], nargs='+', help="filter by era" )
   parser.add_argument('-z', '--zip',      action='store_true', help="gzip JSON file" )
+  parser.add_argument('-V', '--validate', action='store_true', help="validate JSON" )
   parser.add_argument('-v', '--verbose',  dest='verbosity', type=int, nargs='?', const=1, default=0,
                                           help="set verbosity" )
   args = parser.parse_args()
