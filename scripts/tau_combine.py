@@ -8,7 +8,7 @@
 #   scp ineuteli@lxplus.cern.ch:/afs/cern.ch/work/l/lwezenbe/public/TriggerSFs/JSON/*json data/tau/new/
 #   scripts/tau_combine.py -y 2018ReReco
 #   scripts/tau_combine.py a=DeepTauVSmu.json b=DeepTauVSjet.json
-#   scp data/tau/new/*2017* ineuteli@lxplus.cern.ch:/eos/cms/store/group/phys_tau/JSONPOG/POG/TAU/2017_ReReco/
+#   scp data/tau/new/*2017* ineuteli@lxplus.cern.ch:/eos/cms/store/group/phys_tau/JSONPOG/TauPOG_v2/POG/TAU/2017_ReReco/
 import os, sys
 import glob
 import re

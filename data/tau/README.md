@@ -134,10 +134,10 @@ year
       │              ├─ key:nom
       │              │  └─ float:sf
       │              ├─ key:up
-      │              │  ├─ formula:sf (34<pt<170)
+      │              │  ├─ formula:pt (34<pt<170)
       │              │  └─ float:sf (otherwise)
       │              └─ key:down
-      │                 ├─ formula:sf (34<pt<170)
+      │                 ├─ formula:pt (34<pt<170)
       │                 └─ float:sf (otherwise)
       ├─ key:genmatch==1,3 (e -> tau fake)
       │  └─ category:dm
