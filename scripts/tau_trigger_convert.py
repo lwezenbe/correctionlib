@@ -23,22 +23,6 @@ from correctionlib.schemav2 import (
     Formula,
     Transform
 )
-
-#
-# Different test functions taken from data/conversion and adapted
-#
-def build_syst(val, err):
-    return Category.parse_obj(
-        {
-            "nodetype": "category",
-            "input": "syst",
-            "content": [
-                {"key": "nominal", "value": val},
-                {"key": "up", "value": val+err},
-                {"key": "down", "value": val-err},
-            ],
-        }
-    )
   
 def merge_pt_bins(edges, values, errors):
 
@@ -69,23 +53,34 @@ def build_pts(in_file, hist_name):
 
   f = uproot.open(in_file)
   hist = f[hist_name]
-  edges = [x for x in hist.to_numpy()[1]]
+  edges = [round(x,5) for x in hist.to_numpy()[1]]
 
   edges, tmp_values, tmp_errors = merge_pt_bins(edges, hist.values(), hist.errors())
 
-  content = []
-  for val, err in zip(tmp_values, tmp_errors):
-      content.append(build_syst(val, err))
+  content = {
+    'nom' : [round(val, 8) for val in tmp_values],
+    'up' : [round(val+err, 8) for val, err in zip(tmp_values, tmp_errors)],
+    'down' : [round(val-err, 8) for val, err in zip(tmp_values, tmp_errors)]
+  }
 
-  return Binning.parse_obj(
-      {
-          "nodetype": "binning",
-          "input": "pt",
-          "edges": edges,
-          "content": content,
-          "flow": "clamp",
-      }
+  return Category.parse_obj(
+    {
+      "nodetype": "category",
+      "input": "syst",
+      "content": [
+        {"key": syst, 
+        "value": {
+            "nodetype": "binning",
+            "input": "pt",
+            "edges": edges,
+            "content": content[syst],
+            "flow": "clamp",
+          } 
+        } for syst in ['nom', 'up', 'down']
+      ],
+    }
   )
+
 
 # Define parameters to fill
 years = [2016, 2017, 2018]
@@ -94,7 +89,6 @@ wps     = [
   'Loose', 'Medium', 'Tight',
   'VTight', 'VVTight'
 ]
-# wps = ['Loose']
 corrtypes = ['sf', 'eff_mc', 'eff_data']
 
 # Define DM's
@@ -187,17 +181,22 @@ def convert_trigger(corrs, year):
   fname   = "data/tau/tau_trigger"+str(year)+".json"
   corr    = Correction.parse_obj({
     'version': 0,
-    'name':    "test_DeepTau2017v2p1VSjet",
+    'name':    "tauTriggerSF",
+    'description' : "Tau Trigger SFs and efficiencies for {0} ditau, etau, mutau or ditauvbf triggers. " +\
+                    "Ditauvbf trigger SF is only available for 2017 and 2018. To get the usual DM-specific SF's, "+\
+                    "specify the DM, otherwise set DM to -1 to get the inclusive SFs. " +\
+                    "Default corrections are set to SF's, if you require the input efficiencies, you can specify so in " +\
+                    "the corrtype input variable",
     'inputs': [
       {'name': "pt",       'type': "real",   'description': "tau pt"},
-      {'name': "trigtype",       'type': "string",    'description': "Type of trigger: 'ditau', 'etau', 'mutau'"},
-      {'name': "corrtype",       'type': "string",    'description': "Type of information: 'eff_data', 'eff_mc', 'sf'"},
+      {'name': "dm",       'type': "int",    'description': "tau decay mode (0, 1, 10, or 11, -1)"},
+      {'name': "trigtype",       'type': "string",    'description': "Type of trigger: 'ditau', 'etau', 'mutau', 'ditauvbf"},
       {'name': "wp",       'type': "string", 'description': "DeepTauVSjet WP: VVVLoose-VVTight"},
+      {'name': "corrtype",       'type': "string",    'description': "Type of information: 'eff_data', 'eff_mc', 'sf'"},
       {'name': "syst",     'type': "string", 'description': "systematic 'nom', 'up', 'down'"},
-      {'name': "dm",       'type': "int",    'description': "tau decay mode (0, 1, 10, or 11)"},
     ],
     'output': {'name': "weight", 'type': "real"},
-    'data': { # category:year -> category:trigtype -> category:wp -> category dm -> binning:pt -> category:syst
+    'data': { # category:trigtype -> category:wp -> category dm -> binning:pt -> category:syst
       'nodetype': 'category', # category:genmatch
       'input': "trigtype",
       'content': [
@@ -223,16 +222,14 @@ def convert_trigger(corrs, year):
       ]
     } #category:trigtype
   })
-  # print(corr)
-  # print(corr.data.content)
   print(f">>> Writing {fname}...")
   with open(fname,'w') as fout:
-    fout.write(corr.json(exclude_unset=True,indent=2))
+    JSONEncoder.write(corr,fname,maxlistlen=20)
   corrs.append(corr)
 
 def evaluate(corrs):
   header("Evaluate")
-  cset_py, cset = wrap(corrs) # wrap to create C++ object that can be evaluated
+  cset = wrap(corrs) # wrap to create C++ object that can be evaluated
   ptbins = [10.,21.,26.,31.,36.,41.,501.,750.,999.,2000.]
   for name in list(cset):
     corr = cset[name]
@@ -246,10 +243,10 @@ def evaluate(corrs):
           row = ">>> %s"%(tt)
           for pt in ptbins:
             sfnom = 0.0
-            for syst in ['nominal','up','down']:
+            for syst in ['nom','up','down']:
               #print(">>>   gm=%d, eta=%4.1f, syst=%r sf=%s"%(gm,eta,syst,eval(corr,eta,gm,wp,syst)))
               try:
-                sf = corr.evaluate(pt, 2017, tt,wp,syst,dm)
+                sf = corr.evaluate(pt, dm, tt,wp,'sf',syst)
                 if 'nom' in syst:
                   row += "%6.2f"%(sf)
                   sfnom = sf
@@ -263,7 +260,7 @@ def evaluate(corrs):
   print(">>>")
 
 def makeRootFiles(corrs, year):
-  cset_py, cset = wrap(corrs) # wrap to create C++ object that can be evaluated
+  cset = wrap(corrs) # wrap to create C++ object that can be evaluated
   out_file = ROOT.TFile('data/tau/correctionHistogramsRebinned_'+str(year)+'.root', 'recreate')
   for name in list(cset):
     corr = cset[name]
@@ -281,15 +278,15 @@ def makeRootFiles(corrs, year):
               hist = f[in_hist_name(corrtype_dict[corrtype], tt, wp, dm_dict_merged[dm])]
             else:
               hist = f[in_hist_name(corrtype_dict[corrtype], tt, wp, dm_dict_nonmerged[dm])]
-            edges = [x for x in hist.to_numpy()[1]]
+            edges = [round(x,5) for x in hist.to_numpy()[1]]
             ptbin_edges, tmp_values, tmp_errors = merge_pt_bins(edges, hist.values(), hist.errors())
 
             hist = ROOT.TH1D('-'.join([corrtype_dict[corrtype], wp, str(dm), tt]), '-'.join([corrtype_dict[corrtype], wp, str(dm), tt]), len(ptbin_edges)-1, numpy.array(ptbin_edges))
             for pt_bin in range(1, len(ptbin_edges)):
               pt_bin_center = ptbin_edges[pt_bin-1]+ (ptbin_edges[pt_bin] - ptbin_edges[pt_bin-1])/2.
               try:
-                hist.SetBinContent(pt_bin, corr.evaluate(pt_bin_center, tt, corrtype,wp,'nominal',dm))
-                hist.SetBinError(pt_bin, corr.evaluate(pt_bin_center, tt, corrtype, wp,'up',dm)-corr.evaluate(pt_bin_center, tt, corrtype,wp,'nominal',dm) )
+                hist.SetBinContent(pt_bin, corr.evaluate(pt_bin_center, dm, tt, wp, corrtype,'nom'))
+                hist.SetBinError(pt_bin, corr.evaluate(pt_bin_center, dm, tt, wp, corrtype,'up')-corr.evaluate(pt_bin_center, dm, tt, wp, corrtype,'nom') )
               except:
                 print("Errors for {0} trigger with {1} wp and dm={2} for pt={3}GeV".format(tt, wp, str(dm), str(pt_bin_center)))
             hist.Write()
@@ -298,7 +295,7 @@ def makeRootFiles(corrs, year):
 
 def compareSFs(corrs, year):
   from TauAnalysisTools.TauTriggerSFs.SFProvider import SFProvider
-  cset_py, cset = wrap(corrs) # wrap to create C++ object that can be evaluated
+  cset = wrap(corrs) # wrap to create C++ object that can be evaluated
   ptbins = numpy.arange(20, 1000, 0.1)
   for name in list(cset):
     corr = cset[name]
@@ -312,35 +309,24 @@ def compareSFs(corrs, year):
           print(f">>>\n>>> DM={dm}")
           old_sfs = SFProvider(in_file_name(year), tt, wp)
           for pt in ptbins:
-            if abs((old_sfs.getSF(pt, dm, 0) - corr.evaluate(pt, tt,'sf', wp,'nominal',dm))/old_sfs.getSF(pt, dm, 0)) > 0.01:
-              print("Large difference in SF ({0}) for {1}, {2}, {3}, {4}, {5}".format(str((old_sfs.getSF(pt, dm, 0) - corr.evaluate(pt, tt,'sf', wp,'nominal',dm))/old_sfs.getSF(pt, dm, 0)), year, tt, wp, str(dm), str(pt)))
-              print("Old: {0} New: {1}".format(old_sfs.getSF(pt, dm, 0), corr.evaluate(pt,tt,'sf',wp,'nominal',dm)))
-            if abs((old_sfs.getEfficiencyMC(pt, dm, 0) - corr.evaluate(pt, tt,'eff_mc', wp,'nominal',dm))/old_sfs.getEfficiencyMC(pt, dm, 0)) > 0.01:
-              print("Large difference in MC EFF ({0}) for {1}, {2}, {3}, {4}, {5}".format(str((old_sfs.getEfficiencyMC(pt, dm, 0) - corr.evaluate(pt, tt,'eff_mc',wp,'nominal',dm))/old_sfs.getEfficiencyMC(pt, dm, 0)), year, tt, wp, str(dm), str(pt)))
-              print("Old: {0} New: {1}".format(old_sfs.getEfficiencyMC(pt, dm, 0), corr.evaluate(pt,tt,'eff_mc',wp,'nominal',dm)))
-            if abs((old_sfs.getEfficiencyData(pt, dm, 0) - corr.evaluate(pt, tt,'eff_data', wp,'nominal',dm))/old_sfs.getEfficiencyData(pt, dm, 0)) > 0.01:
-              print("Large difference in Data EFF ({0}) for {1}, {2}, {3}, {4}, {5}".format(str((old_sfs.getEfficiencyData(pt, dm, 0) - corr.evaluate(pt, tt,'eff_data',wp,'nominal',dm))/old_sfs.getEfficiencyData(pt, dm, 0)), year, tt, wp, str(dm), str(pt)))
-              print("Old: {0} New: {1}".format(old_sfs.getEfficiencyData(pt, dm, 0), corr.evaluate(pt,tt,'eff_data',wp,'nominal',dm)))
-            # if abs((old_sfs.getSF(pt, dm, 1) - corr.evaluate(pt, year, tt,wp,'up',dm))/old_sfs.getSF(pt, dm, 1)) > 0.01:
-            #   print("Large difference in SF up unc ({0}) for {1}, {2}, {3}, {4}, {5}".format(str((old_sfs.getSF(pt, dm, 1) - corr.evaluate(pt, year, tt,wp,'up',dm))/old_sfs.getSF(pt, dm, 1)), year, tt, wp, str(dm), str(pt)))
-            #   print("Old: {0} New: {1}".format(old_sfs.getSF(pt, dm, 1), corr.evaluate(pt, year, tt,wp,'up',dm)))
-            # if abs((old_sfs.getSF(pt, dm, -1) - corr.evaluate(pt, year, tt,wp,'down',dm))/old_sfs.getSF(pt, dm, -1)) > 0.01:
-            #   print("Large difference in SF down unc ({0}) for {1}, {2}, {3}, {4}, {5}".format(str((old_sfs.getSF(pt, dm, -1) - corr.evaluate(pt, year, tt,wp,'down',dm))/old_sfs.getSF(pt, dm, -1)), year, tt, wp, str(dm), str(pt)))
-            #   print("Old: {0} New: {1}".format(old_sfs.getSF(pt, dm, -1), corr.evaluate(pt, year, tt,wp,'down',dm)))
-
+            if abs((old_sfs.getSF(pt, dm, 0) - corr.evaluate(pt, dm, tt,wp,'sf','nom'))/old_sfs.getSF(pt, dm, 0)) > 0.01:
+              print("Large difference in SF ({0}) for {1}, {2}, {3}, {4}, {5}".format(str((old_sfs.getSF(pt, dm, 0) - corr.evaluate(pt, dm, tt,wp,'sf','nom'))/old_sfs.getSF(pt, dm, 0)), year, tt, wp, str(dm), str(pt)))
+              print("Old: {0} New: {1}".format(old_sfs.getSF(pt, dm, 0), corr.evaluate(pt, dm,tt,wp,'sf','nom')))
+            if abs((old_sfs.getEfficiencyMC(pt, dm, 0) - corr.evaluate(pt, dm, tt,wp,'eff_mc','nom'))/old_sfs.getEfficiencyMC(pt, dm, 0)) > 0.01:
+              print("Large difference in MC EFF ({0}) for {1}, {2}, {3}, {4}, {5}".format(str((old_sfs.getEfficiencyMC(pt, dm, 0) - corr.evaluate(pt, dm, tt,wp,'eff_mc','nom'))/old_sfs.getEfficiencyMC(pt, dm, 0)), year, tt, wp, str(dm), str(pt)))
+              print("Old: {0} New: {1}".format(old_sfs.getEfficiencyMC(pt, dm, 0), corr.evaluate(pt, dm,tt,wp,'eff_mc','nom')))
+            if abs((old_sfs.getEfficiencyData(pt, dm, 0) - corr.evaluate(pt, dm, tt,wp,'eff_data','nom'))/old_sfs.getEfficiencyData(pt, dm, 0)) > 0.01:
+              print("Large difference in Data EFF ({0}) for {1}, {2}, {3}, {4}, {5}".format(str((old_sfs.getEfficiencyData(pt, dm, 0) - corr.evaluate(pt, dm, tt,wp,'eff_data','nom'))/old_sfs.getEfficiencyData(pt, dm, 0)), year, tt, wp, str(dm), str(pt)))
+              print("Old: {0} New: {1}".format(old_sfs.getEfficiencyData(pt, dm, 0), corr.evaluate(pt, dm,tt,wp,'eff_data','nom')))
 
   print(">>>")
 
 def main():
   corrs = [ ] # list of corrections
-  # test_trigger(corrs)
-  # evaluate(corrs)
   for year in [2016, 2017, 2018]:
     convert_trigger(corrs, year)
     makeRootFiles(corrs, year)
     compareSFs(corrs, year)
-  #write(corrs)
-  #read(corrs)
   
 
 if __name__ == '__main__':
