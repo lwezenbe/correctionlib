@@ -1,7 +1,8 @@
 More information on the output structure is found in [`data/`](../data/tau).
 
-## Structures
-
+## Help functions for JSON structure
+There are dedicated help functions to implement the particular dependencies and recommendation
+of each TauPOG corrections:
 * `tau_tid.py` for tau anti-jet efficiency SFs (e.g. `DeepTau2017v2p1VSjet`).
 * `tau_ltf.py` for tau anti-lepton fake rate SFs (e.g. `DeepTau2017v2p1VSe/mu`).
 * `tau_tid.py` for tau energy scale.
@@ -9,7 +10,6 @@ More information on the output structure is found in [`data/`](../data/tau).
 
 
 ## Convert old TauPOG SFs
-
 Install `correctionlib`:
 ```
 git clone --recursive git@github.com:nsmith-/correctionlib.git
@@ -53,6 +53,7 @@ Once all JSONs are complete, create a master JSON (per year) as follows
 ```
 which will look for all JSONs with name `data/tau/new/tau_*2018ReReco.json`.
 Otherwise, specify which to combine:
+```
 scripts/tau_combine.py a=DeepTauVSmu.json b=DeepTauVSjet.json
 ```
 Copy to the tau repo:

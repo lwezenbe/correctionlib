@@ -189,6 +189,7 @@ def makecorr_tes(tesvals=None,**kwargs):
   outdir  = kwargs.get('outdir',"data/tau") # output directory for JSON file
   info    = ", to be applied to reconstructed tau_h Lorentz vector (pT, mass and energy) in simulated data"
   dms     = (0,1,2,10,11)
+  fesdms  = (0,1)
   gms     = (0,1,2,3,4,5,6)
   ptbins  = (0.,34.,170.)
   etabins = (0.,1.5,2.5)
@@ -202,7 +203,7 @@ def makecorr_tes(tesvals=None,**kwargs):
     ids     = list(tesvals.keys())
     dms     = sorted(list({dm for id in tesvals for dm in tesvals[id]['low']})) # get largest possible DM list
   else: # test format with dummy values
-    header(f"Tau energy scale for {era}")
+    header(f"Tau energy scale")
     name    = kwargs.get('name', f"test_dm")
     fname   = kwargs.get('fname',f"{outdir}/test_tau_tes{tag}.json")
     info    = kwargs.get('info', f"DM-dependent tau energy scale"+info)
@@ -322,6 +323,7 @@ def evaluate(corrs):
   etabins = [-2.0,-1.0,0.0,1.1,2.0,2.5,3.0]
   gms     = [0,1,2,3,4,5,6,7]
   dms     = [0,1,2,5,10,11]
+  id      = "DeepTau2017v2p1"
   for name in list(cset):
     corr = cset[name]
     print(f">>>\n>>> {name}: {corr.description}")
@@ -340,7 +342,7 @@ def evaluate(corrs):
           for syst in ['nom','up','down']:
             #print(">>>   gm=%d, eta=%4.1f, syst=%r sf=%s"%(gm,eta,syst,eval(corr,eta,gm,wp,syst)))
             try:
-              sf = corr.evaluate(pt,eta,dm,gm,syst)
+              sf = corr.evaluate(pt,eta,dm,gm,id,syst)
               if 'nom' in syst:
                 row += "%6.2f"%(sf)
                 sfnom = sf
@@ -355,7 +357,7 @@ def evaluate(corrs):
   
 
 def main():
-  corr1 = makecorr_tes(corrs)
+  corr1 = makecorr_tes()
   corrs = [corr1] # list of corrections
   evaluate(corrs)
   #write(corrs)
