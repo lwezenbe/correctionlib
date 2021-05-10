@@ -23,7 +23,62 @@ from correctionlib.schemav2 import (
     Formula,
     Transform
 )
-  
+
+#
+# Some default values
+#
+default_workingpoints     = [
+  'VVVLoose', 'VVLoose', 'VLoose',
+  'Loose', 'Medium', 'Tight',
+  'VTight', 'VVTight'
+]
+corrtypes = ['sf', 'eff_mc', 'eff_data']
+trigtypes = {
+    '2016Legacy' : ['ditau', 'etau', 'mutau'],
+    '2017ReReco' : ['ditau', 'etau', 'mutau', 'ditauvbf'],
+    '2018ReReco' : ['ditau', 'etau', 'mutau', 'ditauvbf'],
+}
+
+types_with_mergeddm = ['ditauvbf']
+dms_nonmerged = [-1, 0, 1, 10, 11]
+dms_merged = [-1, 0, 1, 10]
+
+dm_dict_nonmerged = {
+  -1: 'dmall',
+  0 : 'dm0',
+  1 : 'dm1',
+  10 : 'dm10',
+  11 : 'dm11'
+}
+dm_dict_merged = {
+  -1: 'dmall',
+  0 : 'dm0',
+  1 : 'dm1',
+  10 : 'dm1011',
+  11 : 'dm1011'
+}
+
+corrtype_dict = {
+  'sf' : 'sf',
+  'eff_mc' : 'mc',
+  'eff_data' : 'data',
+}
+year_dict = {
+  '2016Legacy' : '2016',
+  '2017ReReco' : '2017',
+  '2018ReReco' : '2018',
+  '2016preVFP_UL' : '2016ULpreVFP',
+  '2016postVFP_UL': '2016ULpostVFP',
+  '2017_UL':  '2017UL',
+  '2018_UL':  '2018UL'
+}
+
+in_file_name = lambda year : 'data/tau/'+year_dict[year]+'_tauTriggerEff_DeepTau2017v2p1.root'
+in_hist_name = lambda corrtype, typ, wp, dm_str : '_'.join([corrtype,typ,wp,dm_str,'fitted'])
+
+#
+# Helper function to merge bins that have similar values
+#
 def merge_pt_bins(edges, values, errors):
 
   tmp_values = []
@@ -49,6 +104,17 @@ def merge_pt_bins(edges, values, errors):
   
   return edges, tmp_values, tmp_errors
 
+#
+# Helper function to unpack kwargs
+#
+def kwargs_get(kwargs, kw, default):
+  val = kwargs.get(kw)
+  if val is None: val = default
+  return val
+
+#
+# Functions to build the correction objects
+#
 def build_pts(in_file, hist_name):
 
   f = uproot.open(in_file)
@@ -81,60 +147,13 @@ def build_pts(in_file, hist_name):
     }
   )
 
-
-# Define parameters to fill
-years = [2016, 2017, 2018]
-wps     = [
-  'VVVLoose', 'VVLoose', 'VLoose',
-  'Loose', 'Medium', 'Tight',
-  'VTight', 'VVTight'
-]
-corrtypes = ['sf', 'eff_mc', 'eff_data']
-
-# Define DM's
-types_with_mergeddm = ['ditauvbf']
-
-dms_nonmerged = [-1, 0, 1, 10, 11]
-dms_merged = [-1, 0, 1, 10]
-
-dm_dict_nonmerged = {
-  -1: 'dmall',
-  0 : 'dm0',
-  1 : 'dm1',
-  10 : 'dm10',
-  11 : 'dm11'
-}
-
-dm_dict_merged = {
-  -1: 'dmall',
-  0 : 'dm0',
-  1 : 'dm1',
-  10 : 'dm1011',
-  11 : 'dm1011'
-}
-
-trigtypes = {
-    2016 : ['ditau', 'etau', 'mutau'],
-    2017 : ['ditau', 'etau', 'mutau', 'ditauvbf'],
-    2018 : ['ditau', 'etau', 'mutau', 'ditauvbf'],
-}
-
-corrtype_dict = {
-  'sf' : 'sf',
-  'eff_mc' : 'mc',
-  'eff_data' : 'data',
-}
-
-in_file_name = lambda year : 'data/tau/'+str(year)+'_tauTriggerEff_DeepTau2017v2p1.root'
-in_hist_name = lambda corrtype, typ, wp, dm_str : '_'.join([corrtype,typ,wp,dm_str,'fitted'])
-
 def build_dms(trigtype, wp, year, corrtype):
   print('Filling {0} {1} trigger for {2} WP'.format(year, trigtype, wp))
 
   if not trigtype in types_with_mergeddm:
     return Category.parse_obj(
       {
-        'nodetype': 'category', # category:wp
+        'nodetype': 'category',
         'input': "dm",
         'default': -1, # default DM if unrecognized category
         'content': [
@@ -143,12 +162,12 @@ def build_dms(trigtype, wp, year, corrtype):
               build_pts(in_file_name(year), in_hist_name(corrtype_dict[corrtype],trigtype,wp,dm_dict_nonmerged[dm]))
           } for dm in dms_nonmerged
         ]
-      } # category:dm
+      }
     )
   else:
     return Transform.parse_obj(
       {
-        'nodetype': 'transform', # category:wp
+        'nodetype': 'transform',
         'input': "dm",
         'rule': {
           'nodetype': 'category', # category:dm
@@ -175,10 +194,16 @@ def build_dms(trigtype, wp, year, corrtype):
       } # category
     )
 
-def convert_trigger(corrs, year):
+def convert_trigger(corrs, year, **kwargs):
+
+  workingpoints = kwargs_get(kwargs, 'workingpoints', default_workingpoints)
+  trigger_types = kwargs_get(kwargs, 'triggertypes', trigtypes[year])
+  correction_types = kwargs_get(kwargs, 'correctiontypes', corrtypes)
+  outdir = kwargs_get(kwargs, 'outdir', 'data/tau')
+
   """Tau trigger SF, pT- and dm dependent."""
   header("Tau trigger SF, pT- and dm dependent")
-  fname   = "data/tau/tau_trigger"+str(year)+".json"
+  fname   = outdir+"/tau_trigger"+str(year)+".json"
   corr    = Correction.parse_obj({
     'version': 0,
     'name':    "tauTriggerSF",
@@ -196,13 +221,13 @@ def convert_trigger(corrs, year):
       {'name': "syst",     'type': "string", 'description': "systematic 'nom', 'up', 'down'"},
     ],
     'output': {'name': "weight", 'type': "real"},
-    'data': { # category:trigtype -> category:wp -> category dm -> binning:pt -> category:syst
-      'nodetype': 'category', # category:genmatch
+    'data': { # category:trigtype -> category:corrtype -> category:wp -> category dm -> binning:pt -> category:syst
+      'nodetype': 'category', # category:trigtype
       'input': "trigtype",
       'content': [
         { 'key': trigtype,
           'value': {
-            'nodetype': 'category', # category:genmatch
+            'nodetype': 'category', # category:corrtype
             'input': "corrtype",
             'content' : [
               { 'key' : corrtype,
@@ -212,13 +237,13 @@ def convert_trigger(corrs, year):
                   'content': [
                     { 'key': wp,
                       'value' : build_dms(trigtype, wp, year, corrtype)
-                    } for wp in wps
+                    } for wp in workingpoints
                   ]
                 }
-              } for corrtype in corrtypes
+              } for corrtype in correction_types
             ]  
           } # category:wp
-        } for trigtype in trigtypes[year]
+        } for trigtype in trigger_types
       ]
     } #category:trigtype
   })
@@ -228,18 +253,22 @@ def convert_trigger(corrs, year):
   corrs.append(corr)
 
 def evaluate(corrs):
+
+  workingpoints = kwargs_get(kwargs, 'workingpoints', default_workingpoints)
+  trigger_types = kwargs_get(kwargs, 'triggertypes', trigtypes[year])
+
   header("Evaluate")
   cset = wrap(corrs) # wrap to create C++ object that can be evaluated
   ptbins = [10.,21.,26.,31.,36.,41.,501.,750.,999.,2000.]
   for name in list(cset):
     corr = cset[name]
     print(f">>>\n>>> {name}: {corr.description}")
-    for wp in wps:
+    for wp in workingpoints:
       print(f">>>\n>>> WP={wp}")
       for dm in dms_nonmerged:
         print(f">>>\n>>> DM={dm}")
         print(">>> %8s"%("trigger type")+" ".join("  %-15.1f"%(p) for p in ptbins))
-        for tt in ['ditau', 'etau', 'mutau', 'ditauvbf']:
+        for tt in trigger_types:
           row = ">>> %s"%(tt)
           for pt in ptbins:
             sfnom = 0.0
@@ -259,19 +288,25 @@ def evaluate(corrs):
           print(row)
   print(">>>")
 
-def makeRootFiles(corrs, year):
+def makeRootFiles(corrs, year, **kwargs):
+
+  workingpoints = kwargs_get(kwargs, 'workingpoints', default_workingpoints)
+  trigger_types = kwargs_get(kwargs, 'triggertypes', trigtypes[year])
+  correction_types = kwargs_get(kwargs, 'correctiontypes', corrtypes)
+
   cset = wrap(corrs) # wrap to create C++ object that can be evaluated
   out_file = ROOT.TFile('data/tau/correctionHistogramsRebinned_'+str(year)+'.root', 'recreate')
   for name in list(cset):
     corr = cset[name]
     print(f">>>\n>>> {name}: {corr.description}")
-    for corrtype in corrtypes:
-      for wp in wps:
+    for corrtype in correction_types:
+      print(f">>>\n>>> {corrtype}")
+      for wp in workingpoints:
         print(f">>>\n>>> WP={wp}")
         for dm in dms_nonmerged:
           print(f">>>\n>>> DM={dm}")
           print(">>> %8s"%("trigger type"))
-          for tt in trigtypes[year]:
+          for tt in trigger_types:
             print('Building histogram')
             f = uproot.open(in_file_name(year))
             if tt in types_with_mergeddm:
@@ -293,43 +328,57 @@ def makeRootFiles(corrs, year):
   out_file.Close()
   print(">>>")
 
-def compareSFs(corrs, year):
+def compareSFs(corrs, year, **kwargs):
+
+  workingpoints = kwargs_get(kwargs, 'workingpoints', default_workingpoints)
+  trigger_types = kwargs_get(kwargs, 'triggertypes', trigtypes[year])
+  correction_types = kwargs_get(kwargs, 'correctiontypes', corrtypes)
+
   from TauAnalysisTools.TauTriggerSFs.SFProvider import SFProvider
   cset = wrap(corrs) # wrap to create C++ object that can be evaluated
   ptbins = numpy.arange(20, 1000, 0.1)
   for name in list(cset):
     corr = cset[name]
     print(f">>>\n>>> {name}: {corr.description}")
-    for wp in wps:
+    for wp in workingpoints:
       print(f">>>\n>>> WP={wp}")
       print(">>> %8s"%("trigger type"))
-      for tt in trigtypes[year]:
+      for tt in trigger_types:
         dms = [0, 1, 10, 11]
         for dm in dms:
           print(f">>>\n>>> DM={dm}")
           old_sfs = SFProvider(in_file_name(year), tt, wp)
           for pt in ptbins:
-            if abs((old_sfs.getSF(pt, dm, 0) - corr.evaluate(pt, dm, tt,wp,'sf','nom'))/old_sfs.getSF(pt, dm, 0)) > 0.01:
+            if 'sf' in correction_types and abs((old_sfs.getSF(pt, dm, 0) - corr.evaluate(pt, dm, tt,wp,'sf','nom'))/old_sfs.getSF(pt, dm, 0)) > 0.01:
               print("Large difference in SF ({0}) for {1}, {2}, {3}, {4}, {5}".format(str((old_sfs.getSF(pt, dm, 0) - corr.evaluate(pt, dm, tt,wp,'sf','nom'))/old_sfs.getSF(pt, dm, 0)), year, tt, wp, str(dm), str(pt)))
               print("Old: {0} New: {1}".format(old_sfs.getSF(pt, dm, 0), corr.evaluate(pt, dm,tt,wp,'sf','nom')))
-            if abs((old_sfs.getEfficiencyMC(pt, dm, 0) - corr.evaluate(pt, dm, tt,wp,'eff_mc','nom'))/old_sfs.getEfficiencyMC(pt, dm, 0)) > 0.01:
+            if 'eff_mc' in correction_types and abs((old_sfs.getEfficiencyMC(pt, dm, 0) - corr.evaluate(pt, dm, tt,wp,'eff_mc','nom'))/old_sfs.getEfficiencyMC(pt, dm, 0)) > 0.01:
               print("Large difference in MC EFF ({0}) for {1}, {2}, {3}, {4}, {5}".format(str((old_sfs.getEfficiencyMC(pt, dm, 0) - corr.evaluate(pt, dm, tt,wp,'eff_mc','nom'))/old_sfs.getEfficiencyMC(pt, dm, 0)), year, tt, wp, str(dm), str(pt)))
               print("Old: {0} New: {1}".format(old_sfs.getEfficiencyMC(pt, dm, 0), corr.evaluate(pt, dm,tt,wp,'eff_mc','nom')))
-            if abs((old_sfs.getEfficiencyData(pt, dm, 0) - corr.evaluate(pt, dm, tt,wp,'eff_data','nom'))/old_sfs.getEfficiencyData(pt, dm, 0)) > 0.01:
+            if 'eff_data' in correction_types and abs((old_sfs.getEfficiencyData(pt, dm, 0) - corr.evaluate(pt, dm, tt,wp,'eff_data','nom'))/old_sfs.getEfficiencyData(pt, dm, 0)) > 0.01:
               print("Large difference in Data EFF ({0}) for {1}, {2}, {3}, {4}, {5}".format(str((old_sfs.getEfficiencyData(pt, dm, 0) - corr.evaluate(pt, dm, tt,wp,'eff_data','nom'))/old_sfs.getEfficiencyData(pt, dm, 0)), year, tt, wp, str(dm), str(pt)))
               print("Old: {0} New: {1}".format(old_sfs.getEfficiencyData(pt, dm, 0), corr.evaluate(pt, dm,tt,wp,'eff_data','nom')))
 
   print(">>>")
 
-def main():
-  corrs = [ ] # list of corrections
-  for year in [2016, 2017, 2018]:
-    convert_trigger(corrs, year)
-    makeRootFiles(corrs, year)
-    compareSFs(corrs, year)
-  
-
 if __name__ == '__main__':
-  main()
+  import argparse
+  argParser = argparse.ArgumentParser(description = "Argument parser")
+  argParser.add_argument('--years',   action='store', nargs='*', default = ['2016Legacy', '2017ReReco', '2018ReReco'],
+                            help='Select years/eras to convert', choices=['2016Legacy', '2017ReReco', '2018ReReco', '2016postVFP_UL', '2016preVFP_UL', '2017_UL', '2018_UL'])
+  argParser.add_argument('--workingpoints',   action='store', nargs='*', default = None, help='Select offline working points to convert', 
+                            choices=['VVVLoose', 'VVLoose', 'VLoose', 'Loose', 'Medium', 'Tight', 'VTight', 'VVTight'])
+  argParser.add_argument('--triggertypes',   action='store', nargs='*', default = None, help='Select trigger types to convert', 
+                            choices=['ditau', 'etau', 'mutau', 'ditauvbf'])
+  argParser.add_argument('--correctiontypes',   action='store', nargs='*', default = None, help='Select correction types to convert', 
+                            choices=['sf', 'eff_mc', 'eff_data'])
+  argParser.add_argument('--outdir',   action='store', default = None, help='Select directory to store output')
+  args = argParser.parse_args()
+
+  for year in args.years:
+    corrs = [ ] # list of corrections
+    convert_trigger(corrs, year, workingpoints=args.workingpoints, triggertypes=args.triggertypes, correctiontypes=args.correctiontypes, outdir=args.outdir)
+    makeRootFiles(corrs, year, workingpoints=args.workingpoints, triggertypes=args.triggertypes, correctiontypes=args.correctiontypes, outdir=args.outdir)
+    compareSFs(corrs, year, workingpoints=args.workingpoints, triggertypes=args.triggertypes, correctiontypes=args.correctiontypes, outdir=args.outdir)
   print()
   
