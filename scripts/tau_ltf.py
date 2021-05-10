@@ -100,7 +100,7 @@ def makecorr_ltf(sfs=None,**kwargs):
       {'name': "wp",       'type': "string", 'description': getwpinfo(id,wps)},
       {'name': "syst",     'type': "string", 'description': getsystinfo()},
     ],
-    'output': {'name': "weight", 'type': "real"},
+    'output': {'name': "sf", 'type': "real", 'description': "{id} scale factor"},
     'data': { # transform:genmatch -> category:genmatch -> transform:eta -> category:wp -> binning:eta -> category:syst
       'nodetype': 'transform', # transform:genmatch
       'input': "genmatch",

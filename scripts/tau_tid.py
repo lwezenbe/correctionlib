@@ -183,7 +183,7 @@ def makecorr_tid(ptsfs=None,dmsfs=None,**kwargs):
       {'name': "syst",     'type': "string", 'description': "Systematic 'nom', 'up', 'down'"},
       {'name': "flag",     'type': "string", 'description': "Flag: 'pt' = pT-dependent SFs, 'dm' = DM-dependent SFs (pT > 40 GeV)"},
     ],
-    'output': {'name': "weight", 'type': "real"},
+    'output': {'name': "sf", 'type': "real", 'description': "{id} scale factor"},
     'data': schema.Category.parse_obj({ # category:genmatch -> category:wp -> category:dm -> category:syst
       'nodetype': 'category', # category:genmatch
       'input': "flag",
@@ -244,7 +244,7 @@ def makecorr_tid_pt(sfs=None,**kwargs):
       {'name': "wp",       'type': "string", 'description': getwpinfo(id,wps)},
       {'name': "syst",     'type': "string", 'description': "Systematic 'nom', 'up', 'down'"},
     ],
-    'output': {'name': "weight", 'type': "real"},
+    'output': {'name': "sf", 'type': "real", 'description': "pT-dependent {id} scale factor"},
     'data': maketiddata_pt(sfs,ptbins,wps)
   })
   if verb>=2:
@@ -296,7 +296,7 @@ def makecorr_tid_dm(sfs=None,**kwargs):
       {'name': "wp",       'type': "string", 'description': getwpinfo(id,wps)},
       {'name': "syst",     'type': "string", 'description': getsystinfo()},
     ],
-    'output': {'name': "weight", 'type': "real"},
+    'output': {'name': "sf", 'type': "real", 'description': "DM-dependent {id} scale factor"},
     'data': maketiddata_dm(sfs,dms,wps)
   })
   if verb>=2:

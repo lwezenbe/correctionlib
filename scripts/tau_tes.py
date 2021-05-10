@@ -228,7 +228,7 @@ def makecorr_tes(tesvals=None,**kwargs):
       {'name': "id",       'type': "string", 'description': f"Tau ID: {', '.join(ids)}"},
       {'name': "syst",     'type': "string", 'description': getsystinfo()},
     ],
-    'output': {'name': "weight", 'type': "real"},
+    'output': {'name': "tes", 'type': "real", 'description': "tau energy scale"},
     'data': { # category:id -> key:id -> transform:genmatch -> category:genmatch -> key:genmatch
       'nodetype': 'category', # category:genmatch
       'input': "id",

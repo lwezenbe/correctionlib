@@ -1,8 +1,8 @@
 # TauPOG Corrections
 
-These are the JSON files for the TauPOG. The are created with the scripts in [`scripts/`](../../scripts).
+These is the test area for the JSON files for the TauPOG. The are created with the scripts in [`scripts/`](../../scripts).
 Presented in [https://indico.cern.ch/event/1020470/#2-cms-universal-json-format-fo](https://indico.cern.ch/event/1020470/#2-cms-universal-json-format-fo).
-
+The final JSON files for analyses are stored in [https://gitlab.cern.ch/cms-tau-pog/jsonpog-integration/-/tree/master/POG/TAU](https://gitlab.cern.ch/cms-tau-pog/jsonpog-integration/-/tree/master/POG/TAU)
 
 ## Summary of available DeepTau SFs
 
@@ -19,14 +19,12 @@ This is a rough summary of the available SFs for `DeepTau2017v2p1` from the [off
 ## Structure of main JSON file:
 One correction set with correction object per year and ID. See [XPOG repository](https://gitlab.cern.ch/cms-nanoAOD/jsonpog-integration/-/blob/master/README.md).
 ```
-POG/TAU/tau.json
-└─year
-  ├─ SF_pt_DeepTau2017v2p1VSjet
-  ├─ SF_dm_DeepTau2017v2p1VSjet
-  ├─ SF_DeepTau2017v2p1VSmu
-  ├─ SF_DeepTau2017v2p1VSe
-  ├─ ES_DeepTau2017v2p1VSjet
-  ...
+POG/TAU/$YEAR/tau.json
+├─ DeepTau2017v2p1VSjet
+├─ DeepTau2017v2p1VSmu
+├─ DeepTau2017v2p1VSe
+├─ tau_trigger
+└─ tau_energy_scale
 ```
 
 
@@ -66,8 +64,8 @@ year
          ├─ key:genmatch==2,4 (mu -> tau fake)
          │  └─ category:wp
          │     └─ transform:eta (eta -> abs(eta))
-         │        └─ category:syst (nom, up, down)
-         │           └─ binned:abseta
+         │        └─ binned:abseta
+         │           └─ category:syst (nom, up, down)
          │              └─ float:sf
          └─ key:genmatch==0
             └─ float:1.0
@@ -81,34 +79,36 @@ Users can choose either pT- __or__ DM-dependent SFs.
 An error is thrown if
 * `genmatch` is not in `[0,1,2,3,4,5,6]`.
 * `wp` is not valid.
-* DM-dependent SFs: `dm` is not in `[0,1,10,11]` (and `genmatch==5`)..
+* DM-dependent SFs: `dm` is not in `[0,1,2,10,11]` (and `genmatch==5`)..
 ```
 year
-├─ ID, pT-dependent (MVAoldDM2017v2, DeepTau2017v2p1VSjet)
-│  └─ category:genmatch (0-5)
-│     ├─ key:genmatch==5 (real tau)
-│     │  └─ category:wp
-│     │     └─ binning:pt
-│     │       └─ category:syst (nom, up, down)
-│     │          ├─ key:nom
-│     │          │  └─ float:sf
-│     │          ├─ key:up
-│     │          │  ├─ formula:sf (500<pt<1000)
-│     │          │  └─ float:sf (otherwise)
-│     │          └─ key:down
-│     │             ├─ formula:sf (500<pt<1000)
-│     │             └─ float:sf (otherwise)
-│     └─ key:genmatch==0,1,2,3,4,6
-│        └─ float:1.0
-└─ ID, DM-dependent (e.g. MVAoldDM2017v2, DeepTau2017v2p1VSjet)
-   └─ category:genmatch (0-5)
-      ├─ key:genmatch==5 (real tau)
-      │  └─ category:dm
-      │     └─ category:wp
-      │        └─ category:syst (nom, up, down)
-      │           └─ float:sf
-      └─ key:genmatch==0,1,2,3,4,6
-         └─ float:1.0
+└─ ID (MVAoldDM2017v2, DeepTau2017v2p1VSjet)
+   └─ category:flag ('pt' or 'dm')
+      ├─ key:pt (pT-dependent)
+      │  └─ category:genmatch (0-5)
+      │     ├─ key:genmatch==5 (real tau)
+      │     │  └─ category:wp
+      │     │     └─ binning:pt
+      │     │       └─ category:syst (nom, up, down)
+      │     │          ├─ key:nom
+      │     │          │  └─ float:sf
+      │     │          ├─ key:up
+      │     │          │  ├─ formula:sf (500<pt<1000)
+      │     │          │  └─ float:sf (otherwise)
+      │     │          └─ key:down
+      │     │             ├─ formula:sf (500<pt<1000)
+      │     │             └─ float:sf (otherwise)
+      │     └─ key:genmatch==0,1,2,3,4,6
+      │        └─ float:1.0
+      └─ key:dm (DM-dependent)
+         └─ category:genmatch (0-5)
+            ├─ key:genmatch==5 (real tau)
+            │  └─ category:wp
+            │     └─ category:dm
+            │        └─ category:syst (nom, up, down)
+            │           └─ float:sf
+            └─ key:genmatch==0,1,2,3,4,6
+               └─ float:1.0
 ```
 
 <p align="center">
@@ -121,10 +121,10 @@ One correction object per year and ID,
 see [`scripts/tau_tes.py`](../../scripts/tau_tes.py) and [`test_tau_tes_dm.json`](test_tau_tes.json).
 An error is thrown if
 * `genmatch` is not in `[0,1,2,3,4,5,6]`.
-* `dm` is not in `[0,1,10,11]` (and `genmatch==5`).
+* `dm` is not in `[0,1,2,10,11]` (and `genmatch==5`).
 ```
 year
-└─ ID (MVAoldDM2017v2, DeepTau2017v2p1VSjet)
+└─ category:id (MVAoldDM2017v2, DeepTau2017v2p1VSjet)
    └─ category:genmatch
       ├─ key:genmatch==5 (real tau)
       │  └─ category:dm
