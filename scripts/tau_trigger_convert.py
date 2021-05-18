@@ -79,7 +79,7 @@ in_hist_name = lambda corrtype, typ, wp, dm_str : '_'.join([corrtype,typ,wp,dm_s
 #
 # Helper function to merge bins that have similar values
 #
-def merge_pt_bins(edges, values, errors):
+def merge_pt_bins(edges, values, errors, pt_threshold = 20.):
 
   tmp_values = []
   tmp_errors = []
@@ -88,6 +88,10 @@ def merge_pt_bins(edges, values, errors):
   n_merges = 0
   original_val = 0
   for val, err in zip(values, errors):
+    if edges[bin_nb] < pt_threshold:
+      edges.pop(bin_nb)
+      continue
+
     if bin_nb > 0 and val == tmp_values[-1] and err == tmp_errors[-1]:
       edges.pop(bin_nb)
     elif bin_nb > 0 and abs((val-original_val)/original_val) < 0.005 and n_merges < 4:
@@ -112,16 +116,22 @@ def kwargs_get(kwargs, kw, default):
   if val is None: val = default
   return val
 
+def getPtThreshold(triggertype):
+  if 'ditau' in triggertype:
+    return 39.5
+  else:
+    return 24.5
+
 #
 # Functions to build the correction objects
 #
-def build_pts(in_file, hist_name):
+def build_pts(in_file, hist_name, pt_threshold = 20.):
 
   f = uproot.open(in_file)
   hist = f[hist_name]
   edges = [round(x,5) for x in hist.to_numpy()[1]]
 
-  edges, tmp_values, tmp_errors = merge_pt_bins(edges, hist.values(), hist.errors())
+  edges, tmp_values, tmp_errors = merge_pt_bins(edges, hist.values(), hist.errors(), pt_threshold = pt_threshold)
 
   content = {
     'nom' : [round(val, 8) for val in tmp_values],
@@ -129,6 +139,7 @@ def build_pts(in_file, hist_name):
     'down' : [round(val-err, 8) for val, err in zip(tmp_values, tmp_errors)]
   }
 
+  edges[-1] = float('inf')
   return Category.parse_obj(
     {
       "nodetype": "category",
@@ -140,7 +151,7 @@ def build_pts(in_file, hist_name):
             "input": "pt",
             "edges": edges,
             "content": content[syst],
-            "flow": "clamp",
+            "flow": "error",
           } 
         } for syst in ['nom', 'up', 'down']
       ],
@@ -159,7 +170,7 @@ def build_dms(trigtype, wp, year, corrtype):
         'content': [
           { 'key': dm,
             'value': 
-              build_pts(in_file_name(year), in_hist_name(corrtype_dict[corrtype],trigtype,wp,dm_dict_nonmerged[dm]))
+              build_pts(in_file_name(year), in_hist_name(corrtype_dict[corrtype],trigtype,wp,dm_dict_nonmerged[dm]), pt_threshold=getPtThreshold(trigtype))
           } for dm in dms_nonmerged
         ]
       }
@@ -314,7 +325,7 @@ def makeRootFiles(corrs, year, **kwargs):
             else:
               hist = f[in_hist_name(corrtype_dict[corrtype], tt, wp, dm_dict_nonmerged[dm])]
             edges = [round(x,5) for x in hist.to_numpy()[1]]
-            ptbin_edges, tmp_values, tmp_errors = merge_pt_bins(edges, hist.values(), hist.errors())
+            ptbin_edges, tmp_values, tmp_errors = merge_pt_bins(edges, hist.values(), hist.errors(), pt_threshold = getPtThreshold(tt))
 
             hist = ROOT.TH1D('-'.join([corrtype_dict[corrtype], wp, str(dm), tt]), '-'.join([corrtype_dict[corrtype], wp, str(dm), tt]), len(ptbin_edges)-1, numpy.array(ptbin_edges))
             for pt_bin in range(1, len(ptbin_edges)):
@@ -336,7 +347,6 @@ def compareSFs(corrs, year, **kwargs):
 
   from TauAnalysisTools.TauTriggerSFs.SFProvider import SFProvider
   cset = wrap(corrs) # wrap to create C++ object that can be evaluated
-  ptbins = numpy.arange(20, 1000, 0.1)
   for name in list(cset):
     corr = cset[name]
     print(f">>>\n>>> {name}: {corr.description}")
@@ -344,6 +354,7 @@ def compareSFs(corrs, year, **kwargs):
       print(f">>>\n>>> WP={wp}")
       print(">>> %8s"%("trigger type"))
       for tt in trigger_types:
+        ptbins = numpy.arange(40., 10000., 0.1) if 'ditau' in tt else numpy.arange(25., 10000., 0.1)
         dms = [0, 1, 10, 11]
         for dm in dms:
           print(f">>>\n>>> DM={dm}")
